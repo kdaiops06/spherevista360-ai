@@ -1,0 +1,63 @@
+name: Auto Publish Finance Articles
+
+on:
+  schedule:
+    # Run daily at 6:00 AM UTC (before markets open)
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      article_count:
+        description: "Number of articles to generate"
+        required: false
+        default: "3"
+
+permissions:
+  contents: write
+
+jobs:
+  auto-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch latest news
+        env:
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+        run: npx tsx scripts/fetch-news.ts
+
+      - name: Generate articles
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          EXCHANGERATE_API_KEY: ${{ secrets.EXCHANGERATE_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ARTICLES_COUNT: ${{ github.event.inputs.article_count || '3' }}
+        run: npx tsx scripts/generate-article.ts
+
+      - name: Publish articles
+        env:
+          CI: true
+        run: npx tsx scripts/publish-post.ts
+
+      - name: Summary
+        run: |
+          echo "## Auto-Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Articles Generated:** ${{ github.event.inputs.article_count || '3' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ✅ Published" >> $GITHUB_STEP_SUMMARY
