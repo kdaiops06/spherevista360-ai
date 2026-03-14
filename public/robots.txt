@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://spherevista360.com/sitemap.xml
+Sitemap: https://spherevista360.com/sitemap-main.xml
+Sitemap: https://spherevista360.com/sitemap-currencies.xml
+
+User-agent: GPTBot
+Disallow: /api/

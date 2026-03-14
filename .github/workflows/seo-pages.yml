@@ -1,0 +1,61 @@
+name: Update SEO Pages & Sitemaps
+
+on:
+  schedule:
+    # Run weekly on Sunday at 2:00 AM UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-seo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate currency pair sitemaps
+        run: npx tsx scripts/generate-currency-pages.ts
+
+      - name: Generate SEO pages & robots.txt
+        env:
+          NEXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://spherevista360.com' }}
+        run: npx tsx scripts/generate-seo-pages.ts
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet public/ .cache/ || echo "has_changes=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/ .cache/
+          git commit -m "chore: update sitemaps and SEO data [automated]"
+          git push
+
+      - name: Summary
+        run: |
+          echo "## SEO Update Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f .cache/seo-stats.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat .cache/seo-stats.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
