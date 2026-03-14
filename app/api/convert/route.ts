@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { convertCurrency } from "@/lib/data-sources";
 
+// Fallback rates (USD-based) for when API key is not configured
+const FALLBACK_USD_RATES: Record<string, number> = {
+  USD: 1, EUR: 0.9234, GBP: 0.7891, JPY: 149.85, CHF: 0.8812,
+  AUD: 1.5423, CAD: 1.3567, NZD: 1.6812, CNY: 7.2341, INR: 83.42,
+  SGD: 1.3412, HKD: 7.8102, KRW: 1325.50, BRL: 4.9730, MXN: 17.15, ZAR: 18.92,
+};
+
+function fallbackConvert(from: string, to: string, amount: number) {
+  const fromRate = FALLBACK_USD_RATES[from];
+  const toRate = FALLBACK_USD_RATES[to];
+  if (fromRate === undefined || toRate === undefined) return null;
+  const rate = toRate / fromRate;
+  return { result: Math.round(amount * rate * 100) / 100, rate: Math.round(rate * 10000) / 10000 };
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const from = searchParams.get("from");
@@ -37,8 +52,15 @@ export async function GET(request: NextRequest) {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch {
+    // Fallback to hardcoded rates
+    const fallback = fallbackConvert(from, to, amount);
+    if (fallback) {
+      return NextResponse.json(fallback, {
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+      });
+    }
     return NextResponse.json(
-      { error: "Failed to fetch exchange rate" },
+      { error: "Failed to fetch exchange rate. Configure EXCHANGERATE_API_KEY for full coverage." },
       { status: 502 }
     );
   }
