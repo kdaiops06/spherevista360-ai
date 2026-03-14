@@ -97,6 +97,10 @@ export function RecessionTracker() {
           </div>
         ))}
       </div>
+      <p className="text-xs text-gray-400 mt-4">
+        Default indicator values are illustrative estimates. Adjust them to explore scenarios.
+        This tool is educational and should not be used for financial decisions.
+      </p>
     </div>
   );
 }

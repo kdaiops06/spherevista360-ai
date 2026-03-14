@@ -79,7 +79,7 @@ export default async function HomePage() {
               Platform
             </h1>
             <p className="mt-6 text-lg text-brand-200 md:text-xl">
-              SphereVista360 delivers AI-generated financial news, real-time
+              SphereVista360 delivers AI-generated financial news,
               market analytics, currency insights, economic predictions, and
               interactive financial tools — all in one place.
             </p>
@@ -107,12 +107,12 @@ export default async function HomePage() {
       <section className="container-main py-16">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <MarketOverview data={market.data} />
-            <LatestNewsCard news={news.news} />
+            <MarketOverview data={market.data} isLive={market.isLive} source={market.source} lastUpdated={market.lastUpdated} />
+            <LatestNewsCard news={news.data} isLive={news.isLive} source={news.source} lastUpdated={news.lastUpdated} />
           </div>
           <div className="space-y-6">
-            <CurrencyStrengthCard data={currency.data} />
-            <PredictionsCard predictions={preds.predictions} />
+            <CurrencyStrengthCard data={currency.data} isLive={currency.isLive} source={currency.source} lastUpdated={currency.lastUpdated} />
+            <PredictionsCard predictions={preds.data} isLive={preds.isLive} source={preds.source} lastUpdated={preds.lastUpdated} />
             <GlobalRiskRadar compact />
             <ToolsGrid />
           </div>

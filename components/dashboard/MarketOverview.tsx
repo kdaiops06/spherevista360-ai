@@ -1,17 +1,24 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn, formatCurrency, formatPercent } from "@/lib/utils";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { MarketData } from "@/types";
 
 interface MarketOverviewProps {
   data: MarketData[];
+  isLive?: boolean;
+  source?: string;
+  lastUpdated?: string;
 }
 
-export function MarketOverview({ data }: MarketOverviewProps) {
+export function MarketOverview({ data, isLive = false, source, lastUpdated }: MarketOverviewProps) {
   return (
     <div className="card">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">
-        Global Market Overview
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">
+          Global Market Overview
+        </h2>
+        <DataSourceBadge isLive={isLive} source={source} lastUpdated={lastUpdated} />
+      </div>
       <div className="space-y-3">
         {data.map((item) => (
           <div

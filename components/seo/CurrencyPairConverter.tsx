@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ArrowRightLeft } from "lucide-react";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 
 interface Props {
   fromCode: string;
@@ -24,6 +25,9 @@ export default function CurrencyPairConverter({
   const [result, setResult] = useState<number | null>(null);
   const [rate, setRate] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [source, setSource] = useState<string | undefined>();
+  const [lastUpdated, setLastUpdated] = useState<string | undefined>();
 
   const convert = useCallback(async () => {
     const amt = parseFloat(amount);
@@ -37,6 +41,9 @@ export default function CurrencyPairConverter({
         const data = await res.json();
         setResult(data.result);
         setRate(data.rate);
+        setIsLive(data.isLive ?? false);
+        setSource(data.source);
+        setLastUpdated(data.lastUpdated);
       }
     } catch {
       // silently fail
@@ -56,6 +63,9 @@ export default function CurrencyPairConverter({
       <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
         <ArrowRightLeft className="w-5 h-5 text-indigo-600" />
         {fromCode} to {toCode} Converter
+        <div className="ml-auto">
+          {!loading && <DataSourceBadge isLive={isLive} source={source} lastUpdated={lastUpdated} />}
+        </div>
       </h2>
 
       <div className="space-y-4">

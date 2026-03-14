@@ -118,6 +118,10 @@ export function GoldVsDollar() {
             </div>
           </div>
         )}
+        <p className="text-xs text-gray-400 mt-4">
+          Historical gold prices are approximate annual averages for illustrative purposes only.
+          This tool is educational and does not constitute financial advice.
+        </p>
       </div>
     </div>
   );

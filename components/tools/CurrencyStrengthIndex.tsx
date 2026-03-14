@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Globe } from "lucide-react";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 
 interface StrengthData {
   currency: string;
@@ -10,20 +11,20 @@ interface StrengthData {
   trend: "up" | "down" | "stable";
 }
 
-const CURRENCIES = [
-  { code: "USD", name: "US Dollar", baseRate: 1 },
-  { code: "EUR", name: "Euro", baseRate: 0.9234 },
-  { code: "GBP", name: "British Pound", baseRate: 0.7891 },
-  { code: "JPY", name: "Japanese Yen", baseRate: 149.85 },
-  { code: "CHF", name: "Swiss Franc", baseRate: 0.8812 },
-  { code: "AUD", name: "Australian Dollar", baseRate: 1.5423 },
-  { code: "CAD", name: "Canadian Dollar", baseRate: 1.3567 },
-  { code: "NZD", name: "New Zealand Dollar", baseRate: 1.6812 },
-  { code: "CNY", name: "Chinese Yuan", baseRate: 7.2341 },
-  { code: "INR", name: "Indian Rupee", baseRate: 83.42 },
-  { code: "SGD", name: "Singapore Dollar", baseRate: 1.3412 },
-  { code: "HKD", name: "Hong Kong Dollar", baseRate: 7.8102 },
-];
+const CURRENCIES: Record<string, string> = {
+  USD: "US Dollar",
+  EUR: "Euro",
+  GBP: "British Pound",
+  JPY: "Japanese Yen",
+  CHF: "Swiss Franc",
+  AUD: "Australian Dollar",
+  CAD: "Canadian Dollar",
+  NZD: "New Zealand Dollar",
+  CNY: "Chinese Yuan",
+  INR: "Indian Rupee",
+  SGD: "Singapore Dollar",
+  HKD: "Hong Kong Dollar",
+};
 
 function computeStrength(rate: number): number {
   // Inverted and scaled — lower rate vs USD = stronger currency
@@ -35,30 +36,67 @@ function computeStrength(rate: number): number {
 
 export function CurrencyStrengthIndex() {
   const [data, setData] = useState<StrengthData[]>([]);
+  const [isLive, setIsLive] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | undefined>();
 
   useEffect(() => {
-    const strengths: StrengthData[] = CURRENCIES.map((c) => {
-      const strength = c.code === "USD" ? 72 : computeStrength(c.baseRate);
-      const trends: ("up" | "down" | "stable")[] = ["up", "down", "stable"];
-      return {
-        currency: c.code,
-        name: c.name,
-        strength,
-        trend: trends[Math.floor(Math.random() * 3)],
-      };
-    }).sort((a, b) => b.strength - a.strength);
-    setData(strengths);
+    async function fetchStrength() {
+      try {
+        const res = await fetch("https://api.frankfurter.app/latest?base=USD");
+        if (!res.ok) throw new Error("API error");
+        const json = await res.json();
+        // json = { base: "USD", date: "2026-03-14", rates: { EUR: 0.92, ... } }
+        const strengths = Object.entries(CURRENCIES)
+          .map(([code, name]): StrengthData | null => {
+            const rate = code === "USD" ? 1 : (json.rates[code] as number | undefined);
+            if (!rate) return null;
+            return {
+              currency: code,
+              name,
+              strength: code === "USD" ? 72 : computeStrength(rate),
+              trend: "stable",
+            };
+          })
+          .filter((x): x is StrengthData => x !== null)
+          .sort((a, b) => b.strength - a.strength);
+        setData(strengths);
+        setIsLive(true);
+        setLastUpdated(json.date);
+      } catch {
+        // Fallback to static illustrative data
+        const fallbackRates: Record<string, number> = {
+          USD: 1, EUR: 0.9234, GBP: 0.7891, JPY: 149.85, CHF: 0.8812,
+          AUD: 1.5423, CAD: 1.3567, NZD: 1.6812, CNY: 7.2341, INR: 83.42,
+          SGD: 1.3412, HKD: 7.8102,
+        };
+        const strengths: StrengthData[] = Object.entries(CURRENCIES)
+          .map(([code, name]) => ({
+            currency: code,
+            name,
+            strength: code === "USD" ? 72 : computeStrength(fallbackRates[code] || 1),
+            trend: "stable" as const,
+          }))
+          .sort((a, b) => b.strength - a.strength);
+        setData(strengths);
+        setIsLive(false);
+      }
+    }
+    fetchStrength();
   }, []);
 
   return (
     <div className="card max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6">
-        <Globe className="h-6 w-6 text-brand-600" />
-        <h2 className="text-2xl font-bold text-gray-900">Currency Strength Index</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Globe className="h-6 w-6 text-brand-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Currency Strength Index</h2>
+        </div>
+        <DataSourceBadge isLive={isLive} source={isLive ? "European Central Bank" : undefined} lastUpdated={lastUpdated} />
       </div>
 
       <p className="text-sm text-gray-600 mb-6">
         Relative strength of major world currencies based on exchange rate fundamentals. Higher score indicates a stronger currency.
+        {!isLive && " (Showing illustrative data — live rates unavailable.)"}
       </p>
 
       <div className="space-y-3">

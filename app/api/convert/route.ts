@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { convertFree } from "@/lib/free-currency-api";
 import { convertCurrency } from "@/lib/data-sources";
 
-// Fallback rates (USD-based) for when API key is not configured
+// Static fallback rates (USD-based) — last updated March 2025
+// Used only when both free API and paid API are unavailable
 const FALLBACK_USD_RATES: Record<string, number> = {
   USD: 1, EUR: 0.9234, GBP: 0.7891, JPY: 149.85, CHF: 0.8812,
   AUD: 1.5423, CAD: 1.3567, NZD: 1.6812, CNY: 7.2341, INR: 83.42,
@@ -14,13 +16,20 @@ const FALLBACK_USD_RATES: Record<string, number> = {
   GHS: 12.80, PKR: 278.50, BDT: 110.20, LKR: 312.50, NPR: 133.50,
   CLP: 925, COP: 3920, PEN: 3.72, ARS: 870, UYU: 39.20,
 };
+const FALLBACK_DATE = "2025-03-01";
 
 function fallbackConvert(from: string, to: string, amount: number) {
   const fromRate = FALLBACK_USD_RATES[from];
   const toRate = FALLBACK_USD_RATES[to];
   if (fromRate === undefined || toRate === undefined) return null;
   const rate = toRate / fromRate;
-  return { result: Math.round(amount * rate * 100) / 100, rate: Math.round(rate * 10000) / 10000 };
+  return {
+    result: Math.round(amount * rate * 100) / 100,
+    rate: Math.round(rate * 10000) / 10000,
+    isLive: false,
+    source: "Static fallback (rates may be outdated)",
+    lastUpdated: FALLBACK_DATE,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -53,22 +62,38 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Chain: Free API (frankfurter.app) → Paid API → Static fallback
+  // 1) Try free ECB-based API (no key needed)
   try {
-    const data = await convertCurrency(from, to, amount);
+    const data = await convertFree(from, to, amount);
     return NextResponse.json(data, {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch {
-    // Fallback to hardcoded rates
-    const fallback = fallbackConvert(from, to, amount);
-    if (fallback) {
-      return NextResponse.json(fallback, {
-        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
-      });
-    }
-    return NextResponse.json(
-      { error: "Failed to fetch exchange rate. Configure EXCHANGERATE_API_KEY for full coverage." },
-      { status: 502 }
-    );
+    // free API failed — try paid API next
   }
+
+  // 2) Try paid ExchangeRate API (if key configured)
+  try {
+    const data = await convertCurrency(from, to, amount);
+    return NextResponse.json(
+      { ...data, isLive: true, source: "ExchangeRate API", lastUpdated: new Date().toISOString().split("T")[0] },
+      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } },
+    );
+  } catch {
+    // paid API failed or not configured — use static fallback
+  }
+
+  // 3) Static fallback (clearly labeled as outdated)
+  const fallback = fallbackConvert(from, to, amount);
+  if (fallback) {
+    return NextResponse.json(fallback, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+    });
+  }
+
+  return NextResponse.json(
+    { error: "Currency pair not supported" },
+    { status: 502 }
+  );
 }

@@ -1,16 +1,23 @@
 import { cn } from "@/lib/utils";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { CurrencyStrength } from "@/types";
 
 interface CurrencyStrengthCardProps {
   data: CurrencyStrength[];
+  isLive?: boolean;
+  source?: string;
+  lastUpdated?: string;
 }
 
-export function CurrencyStrengthCard({ data }: CurrencyStrengthCardProps) {
+export function CurrencyStrengthCard({ data, isLive = false, source, lastUpdated }: CurrencyStrengthCardProps) {
   return (
     <div className="card">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">
-        Currency Strength
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900">
+          Currency Strength
+        </h2>
+        <DataSourceBadge isLive={isLive} source={source} lastUpdated={lastUpdated} />
+      </div>
       <div className="space-y-3">
         {data.map((currency) => (
           <div key={currency.currency} className="space-y-1">

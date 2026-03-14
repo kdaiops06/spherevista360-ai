@@ -22,7 +22,9 @@ export default async function CurrenciesPage() {
           Currency Exchange Rates
         </h1>
         <p className="mt-3 text-lg text-gray-600">
-          Real-time exchange rates and currency strength analysis
+          {ratesResult.isLive
+            ? `Exchange rates from ${ratesResult.source} (updated ${ratesResult.lastUpdated})`
+            : "Illustrative exchange rates — configure API keys for live data"}
         </p>
       </div>
 
@@ -45,7 +47,7 @@ export default async function CurrenciesPage() {
                 </tr>
               </thead>
               <tbody>
-                {ratesResult.rates.map((rate) => (
+                {ratesResult.data.map((rate) => (
                   <tr key={rate.target} className="border-b border-gray-100">
                     <td className="py-3 font-medium text-gray-900">
                       {rate.base}/{rate.target}
@@ -61,7 +63,7 @@ export default async function CurrenciesPage() {
         </div>
 
         {/* Currency Strength */}
-        <CurrencyStrengthCard data={strengthResult.data} />
+        <CurrencyStrengthCard data={strengthResult.data} isLive={strengthResult.isLive} source={strengthResult.source} lastUpdated={strengthResult.lastUpdated} />
       </div>
 
       <div className="mt-8 text-center">

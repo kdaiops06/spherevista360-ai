@@ -1,17 +1,24 @@
 import { cn } from "@/lib/utils";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { AIPrediction } from "@/types";
 import { Brain } from "lucide-react";
 
 interface PredictionsCardProps {
   predictions: AIPrediction[];
+  isLive?: boolean;
+  source?: string;
+  lastUpdated?: string;
 }
 
-export function PredictionsCard({ predictions }: PredictionsCardProps) {
+export function PredictionsCard({ predictions, isLive = false, source, lastUpdated }: PredictionsCardProps) {
   return (
     <div className="card">
       <div className="flex items-center gap-2 mb-4">
         <Brain className="h-5 w-5 text-brand-600" />
         <h2 className="text-xl font-bold text-gray-900">AI Predictions</h2>
+        <div className="ml-auto">
+          <DataSourceBadge isLive={isLive} source={source} lastUpdated={lastUpdated} />
+        </div>
       </div>
 
       <div className="space-y-3">

@@ -1,23 +1,30 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { NewsItem } from "@/types";
 import { ExternalLink } from "lucide-react";
 
 interface LatestNewsCardProps {
   news: NewsItem[];
+  isLive?: boolean;
+  source?: string;
+  lastUpdated?: string;
 }
 
-export function LatestNewsCard({ news }: LatestNewsCardProps) {
+export function LatestNewsCard({ news, isLive = false, source, lastUpdated }: LatestNewsCardProps) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-gray-900">Latest News</h2>
-        <Link
-          href="/news"
-          className="text-sm font-medium text-brand-600 hover:text-brand-700"
-        >
-          View all →
-        </Link>
+        <div className="flex items-center gap-3">
+          <DataSourceBadge isLive={isLive} source={source} lastUpdated={lastUpdated} />
+          <Link
+            href="/news"
+            className="text-sm font-medium text-brand-600 hover:text-brand-700"
+          >
+            View all →
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-3">
