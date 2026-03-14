@@ -1,120 +1,242 @@
-# SphereVista360 — AI-Powered Financial Intelligence Platform
+# 🌐 SphereVista360 — AI-Powered Financial Intelligence Platform
 
-![SphereVista360](https://img.shields.io/badge/SphereVista360-Financial%20Intelligence-blue)
-![Next.js](https://img.shields.io/badge/Next.js-15-black)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+<div align="center">
 
-A fully automated finance news and analytics platform capable of generating passive income through ads, affiliate content, financial tools, and SEO traffic. Built with Next.js 15, AI agents, and GitHub Actions automation.
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://typescriptlang.org)
+[![Playwright](https://img.shields.io/badge/Playwright-E2E_Tests-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000?logo=vercel)](https://vercel.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-**Live Site:** [https://spherevista360.com](https://spherevista360.com)
+**An open-source, fully automated finance platform generating 6,200+ SEO pages, AI-written articles, and passive revenue — all on autopilot.**
 
----
+[Live Demo](https://spherevista360.com) · [Revenue Playbook](MONETIZATION.md) · [SEO Strategy](SEO-PLAYBOOK.md) · [Contributing](CONTRIBUTING.md)
 
-## Table of Contents
-
-- [Architecture Overview](#architecture-overview)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [AI Agents](#ai-agents)
-- [Automation Pipeline](#automation-pipeline)
-- [Financial Tools](#financial-tools)
-- [Programmatic SEO](#programmatic-seo)
-- [Global Risk Radar](#global-risk-radar)
-- [E2E Testing](#e2e-testing)
-- [Adding New Content Pipelines](#adding-new-content-pipelines)
-- [Adding New Financial Tools](#adding-new-financial-tools)
-- [Running Automation Locally](#running-automation-locally)
-- [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-- [Monetization](#monetization)
+</div>
 
 ---
 
-## Architecture Overview
+## Why SphereVista360?
+
+Most finance websites are built manually — one article, one page at a time. SphereVista360 takes a different approach: **AI agents generate content, programmatic SEO creates thousands of pages, and GitHub Actions publish everything automatically.**
+
+The result: a platform that grows organically while you sleep.
+
+| What You Get | Scale |
+|---|---|
+| **Programmatic SEO pages** | 6,200+ (currency pairs, inflation, investments, comparisons) |
+| **Financial calculator tools** | 11 interactive tools |
+| **AI agents** | 6 agents for content, analysis, and SEO |
+| **Automated publishing** | Daily via GitHub Actions cron |
+| **E2E test coverage** | 36 Playwright tests + CI pipeline |
+| **Revenue-ready components** | AdSense, affiliate, newsletter built-in |
+
+---
+
+## Platform at a Glance
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    DATA SOURCES                          │
-│  Alpha Vantage │ ExchangeRate │ FRED │ News API │ Reddit │
-└──────────┬───────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────────────────┐
-│                    AI AGENTS                             │
-│  news-agent │ currency-agent │ macro-agent │ seo-agent  │
-│  prediction-agent │ content-agent                       │
-│  Powered by: Claude API + OpenAI API                    │
-└──────────┬───────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────────────────┐
-│               AUTOMATION SCRIPTS                         │
-│  fetch-news.ts → generate-article.ts → publish-post.ts  │
-│  Orchestrated by: GitHub Actions (daily cron)           │
-└──────────┬───────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────────────────┐
-│                    CONTENT LAYER                         │
-│  MDX Articles │ Supabase (PostgreSQL) │ JSON Cache      │
-└──────────┬───────────────────────────────────────────────┘
-           │
-           ▼
-┌──────────────────────────────────────────────────────────┐
-│                 NEXT.JS 15 FRONTEND                      │
-│  Dashboard │ News │ Currencies │ Predictions │ Tools    │
-│  Risk Radar │ Comparisons │ Inflation │ Investment      │
-│  6000+ Currency Pair Pages (Programmatic SEO)           │
-│  SEO │ Structured Data │ AdSense │ Affiliates           │
-│  E2E Tests: Playwright │ CI: GitHub Actions             │
-│  Hosted on: Vercel (auto-deploy on push)                │
-└──────────────────────────────────────────────────────────┘
+📊 6,200+ SEO Pages → 📈 Organic Traffic → 💰 Multiple Revenue Streams
+
+Currency Pairs (6,000+) ──┐
+Inflation Trackers (30) ──┤
+Investment Guides (30) ───┼── Google Indexation ─── AdSense ($15–$45 CPM)
+Comparison Pages (20) ────┤                   ├── Affiliate ($50–$200/signup)
+Financial Tools (11) ─────┤                   ├── Newsletter (2–5% conversion)
+AI Articles (daily) ──────┘                   └── Sponsorships + API access
 ```
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/kdaiops06/spherevista360-ai.git
+cd spherevista360-ai
+npm install
+cp .env.example .env.local   # Add your API keys
+npm run dev                   # → http://localhost:3000
+```
+
+> **No API keys?** The platform works with demo/fallback data out of the box. Add keys later for live data.
+
+---
+
+## Architecture
+
+```
+DATA SOURCES                        AI AGENTS                    FRONTEND
+─────────────                       ─────────                    ────────
+Alpha Vantage ──┐                   news-agent ──┐
+ExchangeRate ───┤                   currency-agent─┤              Dashboard
+FRED API ───────┼─→ Automation ──→  macro-agent ───┼─→ Next.js → Tools (11)
+News API ───────┤   Pipeline        prediction-agent│   15 App   Currency SEO
+Reddit API ─────┘   (GitHub         seo-agent ─────┤   Router    Inflation
+                     Actions)       content-agent──┘              Comparison
+                                                                  Risk Radar
+                        │
+                        ▼
+                   MDX Articles + Supabase + JSON Cache
+                        │
+                        ▼
+                Vercel (auto-deploy on push)
+```
+
+---
+
+## Pages & Routes
+
+### Core Pages
+
+| Route | Description |
+|---|---|
+| `/` | Homepage with dashboard widgets, risk radar, market overview |
+| `/dashboard` | Full financial dashboard |
+| `/news` | AI-generated financial news articles |
+| `/predictions` | AI market predictions and outlooks |
+| `/currencies` | Live currency exchange rates |
+| `/global-risk-radar` | Composite risk index across 5 macro categories |
+| `/tools` | Index of all 11 financial calculators |
+| `/compare` | Asset comparison index (gold vs bitcoin, stocks vs bonds, etc.) |
+
+### Financial Tools (11)
+
+| Tool | Route | Keywords Targeted |
+|---|---|---|
+| Currency Converter | `/tools/currency-converter` | "currency converter", "USD to INR" |
+| SIP Calculator | `/tools/sip-calculator` | "SIP calculator", "mutual fund SIP" |
+| Compound Interest | `/tools/compound-interest` | "compound interest calculator" |
+| EMI Calculator | `/tools/emi-calculator` | "EMI calculator", "loan EMI" |
+| Inflation Calculator | `/tools/inflation-calculator` | "inflation calculator" |
+| Purchasing Power | `/tools/purchasing-power` | "purchasing power calculator" |
+| Investment Return | `/tools/investment-return` | "investment return calculator" |
+| Gold vs Dollar | `/tools/gold-vs-dollar` | "gold price vs dollar" |
+| Currency Strength | `/tools/currency-strength` | "currency strength index" |
+| Recession Tracker | `/tools/recession-tracker` | "recession risk indicator" |
+| Currency Crisis | `/tools/currency-crisis` | "currency crisis tracker" |
+
+### Programmatic SEO Pages (6,200+)
+
+| Type | Count | Route Pattern | Example |
+|---|---|---|---|
+| Currency pairs | 6,006 | `/usd-to-inr` | [/usd-to-inr](https://spherevista360.com/usd-to-inr) |
+| Inflation trackers | 30 | `/inflation/[slug]` | [/inflation/india-inflation-rate](https://spherevista360.com/inflation/india-inflation-rate) |
+| Investment guides | 30 | `/investment/[slug]` | [/investment/how-to-start-investing](https://spherevista360.com/investment/how-to-start-investing) |
+| Asset comparisons | 20 | `/compare/[slug]` | [/compare/gold-vs-bitcoin](https://spherevista360.com/compare/gold-vs-bitcoin) |
+
+---
+
+## AI Agents
+
+Six specialized AI agents power content generation and analysis:
+
+| Agent | What It Does | Trigger |
+|---|---|---|
+| `news-agent` | Fetches financial news → summarizes → generates articles | Daily cron |
+| `currency-agent` | Analyzes exchange rates → produces forex commentary | Daily cron |
+| `macro-agent` | Processes GDP, CPI, employment data → economic analysis | Daily cron |
+| `prediction-agent` | Combines data sources → market outlook predictions | Daily cron |
+| `seo-agent` | Generates metadata, schema markup, internal links | On article creation |
+| `content-agent` | Produces comparison articles, inflation reports, investment guides | On demand |
+
+### Agent Usage
+
+```typescript
+import { newsAgent, currencyAgent, contentAgent } from "./agents";
+
+// Daily pipeline (automated via GitHub Actions)
+const news = await newsAgent.fetchLatestNews();
+const article = await newsAgent.generateNewsArticle(news);
+
+// On-demand content
+const comparison = await contentAgent.generateComparisonArticle("gold", "bitcoin");
+const inflationReport = await contentAgent.generateInflationArticle("India", "2026");
+```
+
+---
+
+## Automation Pipeline
+
+Daily GitHub Actions workflow generates and publishes content automatically:
+
+```
+6:00 AM UTC (daily)
+       │
+       ├─ 1. Fetch news from News API + Reddit
+       ├─ 2. Generate 3 articles (finance, currency, macro) via AI
+       ├─ 3. Save as MDX in content/ directory
+       ├─ 4. Git commit + push to main
+       └─ 5. Vercel auto-deploys new content
+```
+
+**Manual trigger:**
+```bash
+gh workflow run auto-publish.yml -f article_count=5
+```
+
+**Run locally:**
+```bash
+npm run auto-publish   # Full pipeline: fetch → generate → publish
+npm run fetch-news     # Just fetch news
+npm run generate-article   # Just generate articles
+```
+
+---
+
+## Global Risk Radar
+
+A composite risk dashboard tracking 5 macro risk categories, each scored 0–100:
+
+| Category | Indicators |
+|---|---|
+| Recession Risk | GDP contraction probability, yield curve inversion |
+| Inflation Risk | CPI deviation from central bank targets |
+| Currency Crisis | Exchange rate volatility, reserve adequacy |
+| Geopolitical Risk | Conflict indices, trade disruption signals |
+| Debt Crisis | Sovereign debt levels, CDS spreads |
+
+Available as a full page (`/global-risk-radar`) or compact homepage widget (`<GlobalRiskRadar compact />`).
 
 ---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 15 (App Router), TypeScript, TailwindCSS, MDX |
-| **Backend / Data** | Supabase, PostgreSQL |
-| **AI** | Claude API (Anthropic), OpenAI API |
-| **Automation** | GitHub Actions, cron jobs |
-| **Hosting** | Vercel (auto-deploy) |
-| **Data APIs** | Alpha Vantage, ExchangeRate API, FRED API, News API, Reddit API |
+|---|---|
+| Framework | Next.js 15 (App Router), React 19, TypeScript 5.7 |
+| Styling | TailwindCSS 3.4, @tailwindcss/typography |
+| Database | Supabase (PostgreSQL) |
+| AI | Claude API (Anthropic), OpenAI API |
+| Charts | Recharts |
+| Content | MDX with remark/rehype plugins |
+| Testing | Playwright (36 E2E tests) |
+| CI/CD | GitHub Actions (3 workflows) |
+| Hosting | Vercel (auto-deploy) |
+| Data APIs | Alpha Vantage, ExchangeRate, FRED, News API, Reddit |
 
 ---
 
-## Getting Started
+## Testing
 
-### Prerequisites
-
-- Node.js 20+
-- npm or yarn
-- API keys (see [Environment Variables](#environment-variables))
-
-### Installation
+36 E2E tests covering all routes, tools, APIs, and programmatic pages:
 
 ```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/spherevista360-ai.git
-cd spherevista360-ai
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env.local
-# Edit .env.local with your API keys
-
-# Run development server
-npm run dev
+npm run test:e2e          # Headless (CI)
+npm run test:e2e:ui       # Interactive UI
+npm run test:e2e:headed   # Visible browser
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the site.
+| Test Suite | Tests | Covers |
+|---|---|---|
+| Homepage | 4 | Hero, dashboard cards, nav, risk radar |
+| Tools | 12 | All 11 calculators + index |
+| Currency pages | 6 | Pair pages, converter, reverse links, 404 |
+| Risk Radar | 3 | Full page, 5 categories, methodology |
+| API | 3 | Conversion endpoint, error handling |
+| Programmatic pages | 6 | Comparisons, inflation, investment |
+
+CI runs automatically on every push/PR via `.github/workflows/e2e-tests.yml`.
 
 ---
 
@@ -122,455 +244,58 @@ Open [http://localhost:3000](http://localhost:3000) to see the site.
 
 ```
 spherevista360-ai/
-├── app/                          # Next.js App Router pages
-│   ├── layout.tsx               # Root layout with header/footer
-│   ├── page.tsx                 # Homepage with dashboard
-│   ├── news/                    # Financial news pages
-│   │   ├── page.tsx            # News listing
-│   │   └── [slug]/page.tsx     # Individual article
-│   ├── currencies/              # Currency exchange rates
-│   ├── predictions/             # AI market predictions
-│   ├── tools/                   # Financial calculators
-│   │   ├── currency-converter/
-│   │   ├── inflation-calculator/
-│   │   ├── compound-interest/
-│   │   └── purchasing-power/
-│   ├── dashboard/               # Full dashboard view
-│   └── api/                     # API routes
-│       ├── convert/             # Currency conversion endpoint
-│       └── subscribe/           # Newsletter subscription
-│
-├── agents/                      # AI Agent modules
-│   ├── index.ts                # Agent exports
-│   ├── news-agent.ts           # Financial news agent
-│   ├── currency-agent.ts       # Currency analysis agent
-│   ├── macro-agent.ts          # Macroeconomic analysis agent
-│   ├── prediction-agent.ts     # Market prediction agent
-│   └── seo-agent.ts            # SEO optimization agent
-│
-├── scripts/                     # Automation scripts
-│   ├── fetch-news.ts           # Fetch news from APIs
-│   ├── generate-article.ts     # Generate articles with AI
-│   └── publish-post.ts         # Commit & push to GitHub
-│
-├── components/                  # React components
-│   ├── layout/                 # Header, Footer
-│   ├── dashboard/              # Dashboard widgets
-│   ├── tools/                  # Financial calculator components
-│   ├── monetization/           # Ad, affiliate, newsletter components
-│   └── seo/                    # SEO components
-│
-├── content/                     # MDX article content
-│   ├── finance/                # Finance articles
-│   ├── macro/                  # Macroeconomic articles
-│   └── currencies/             # Currency articles
-│
-├── lib/                         # Utility libraries
-│   ├── utils.ts                # General utilities
-│   ├── content.ts              # MDX content pipeline
-│   ├── data-sources.ts         # External API clients
-│   ├── ai/client.ts            # AI API clients
-│   └── supabase/               # Supabase client & schema
-│
-├── types/                       # TypeScript type definitions
-├── .github/workflows/           # GitHub Actions
-│   └── auto-publish.yml        # Daily auto-publish workflow
-└── public/                      # Static assets
-```
-
----
-
-## AI Agents
-
-### How Agents Work
-
-Each agent is a modular TypeScript module that combines data fetching with AI-powered analysis:
-
-| Agent | Purpose | Data Sources | AI Model |
-|-------|---------|-------------|----------|
-| `news-agent` | Fetch news, summarize, generate articles | News API, Reddit | Claude |
-| `currency-agent` | Currency data analysis, forex articles | ExchangeRate API | Claude |
-| `macro-agent` | Economic indicator analysis | FRED API | Claude |
-| `prediction-agent` | Market outlook predictions | Alpha Vantage, FRED | Claude |
-| `seo-agent` | SEO metadata, schema, internal links | Content analysis | Claude |
-
-### Agent Architecture
-
-```typescript
-// Each agent exports a consistent interface:
-export const newsAgent = {
-  name: "news-agent",
-  description: "Fetches financial news, summarizes, and generates SEO articles",
-  fetchLatestNews,      // Data collection
-  summarizeNews,        // AI summarization
-  generateNewsArticle,  // AI article generation
-};
-```
-
-### Using Agents Programmatically
-
-```typescript
-import { newsAgent, currencyAgent, seoAgent } from "./agents";
-
-// Fetch and summarize news
-const news = await newsAgent.fetchLatestNews();
-const summary = await newsAgent.summarizeNews(news);
-
-// Generate a currency article
-const rates = await currencyAgent.fetchCurrencyData();
-const article = await currencyAgent.generateCurrencyArticle(rates);
-
-// Generate SEO metadata for content
-const seo = await seoAgent.generateSEOMetadata(title, content, category);
-```
-
----
-
-## Automation Pipeline
-
-### Daily Automated Publishing
-
-The platform runs a daily GitHub Action that:
-
-1. **Fetches** financial news from News API and Reddit
-2. **Generates** 3 articles (finance, currency, macro) using AI
-3. **Saves** articles as MDX files in the `content/` directory
-4. **Commits** the new content to the repository
-5. **Triggers** Vercel deployment automatically
-
-### GitHub Action Schedule
-
-The workflow runs daily at **6:00 AM UTC** and can also be triggered manually:
-
-```yaml
-on:
-  schedule:
-    - cron: "0 6 * * *"
-  workflow_dispatch:
-    inputs:
-      article_count:
-        description: "Number of articles to generate"
-        default: "3"
-```
-
-### Manual Trigger
-
-You can trigger the workflow manually from the GitHub Actions tab or via the CLI:
-
-```bash
-gh workflow run auto-publish.yml -f article_count=5
-```
-
----
-
-## Financial Tools
-
-### Available Tools
-
-| Tool | URL | Description |
-|------|-----|-------------|
-| Currency Converter | `/tools/currency-converter` | Real-time conversion for 150+ currencies |
-| Inflation Calculator | `/tools/inflation-calculator` | Calculate inflation impact over time |
-| Compound Interest | `/tools/compound-interest` | Investment growth projections |
-| Purchasing Power | `/tools/purchasing-power` | Compare USD value across years |
-
-All tools are:
-- **Client-side rendered** for instant interactivity
-- **SEO optimized** with schema markup (WebApplication type)
-- **Mobile responsive** with accessible form inputs
-
----
-
-## Programmatic SEO
-
-The platform generates **6,000+ optimized pages** automatically for organic search traffic:
-
-### Currency Pair Pages (6,006 pages)
-
-Every combination of 78 world currencies gets a dedicated converter page at `/currencies/[pair]` (e.g., `/currencies/usd-to-inr`).
-
-- **Generation script:** `scripts/generate-currency-pages.ts` creates static params
-- **Dynamic route:** `app/currencies/[pair]/page.tsx` with ISR (24h revalidation)
-- **SEO features:** Unique `<title>`, `<meta description>`, JSON-LD `FAQPage` schema, canonical URLs, reverse-pair links
-- **Internal linking:** Each page links to related pairs and the reverse conversion
-
-### Comparison Pages (20+ pages)
-
-Asset-vs-asset comparison guides at `/compare/[slug]` (e.g., `/compare/gold-vs-bitcoin`).
-
-- **Data source:** `lib/comparisons.ts` — 20 pairs across 9 categories (precious-metals, crypto, stocks, savings, currency, real-assets, commodities, insurance, retirement)
-- **Index page:** `/compare` lists all comparisons grouped by category
-- **SEO features:** Comparison table, FAQ JSON-LD, related comparisons, category-specific content
-
-### Inflation Pages (30 pages)
-
-Country-specific inflation tracker pages at `/inflation/[slug]` (e.g., `/inflation/united-states-inflation-rate`).
-
-- **Data source:** `lib/inflation-data.ts` — 30 countries with current rate, target rate, central bank, currency
-- **Features:** Rate vs. target deviation, status indicator (above/below/on target), related countries grid
-- **SEO features:** FAQ JSON-LD, structured data, educational content
-
-### Investment Guide Pages (30 pages)
-
-Beginner-to-advanced investment guides at `/investment/[slug]` (e.g., `/investment/how-to-start-investing`).
-
-- **Data source:** `lib/investment-data.ts` — 30 guides across 10 categories (beginner, stocks, fixed-income, real-estate, crypto, commodities, retirement, tax, forex, alternative)
-- **Features:** Risk level badge, quick facts (min investment, time horizon), category-specific content
-- **SEO features:** FAQ JSON-LD, related guides
-
-### SEO Scripts
-
-```bash
-# Generate all programmatic SEO pages
-npm run generate:seo
-
-# Individual scripts
-npx tsx scripts/generate-currency-pages.ts
-npx tsx scripts/generate-seo-pages.ts
-```
-
----
-
-## Global Risk Radar
-
-The **Global Risk Radar** (`/global-risk-radar`) provides a composite risk dashboard tracking 5 macro risk categories:
-
-| Category | What It Measures |
-|---|---|
-| Recession Risk | GDP contraction probability, yield curve signals |
-| Inflation Risk | CPI deviation from targets, supply chain stress |
-| Currency Crisis | Exchange rate volatility, reserve adequacy |
-| Geopolitical Risk | Conflict indices, trade disruption signals |
-| Debt Crisis | Sovereign debt levels, credit default swap spreads |
-
-- **Component:** `components/dashboard/GlobalRiskRadar.tsx`
-- **Compact mode:** `<GlobalRiskRadar compact />` renders a sidebar widget (used on homepage)
-- **Full page:** `/global-risk-radar` with methodology explanation, JSON-LD schema, educational content
-- **Score range:** 0–100 per category → composite weighted average → severity label (Low / Moderate / High / Critical)
-
----
-
-## E2E Testing
-
-End-to-end tests use **Playwright** with Chromium. Tests cover all major routes, tools, API endpoints, and programmatic pages.
-
-### Test Commands
-
-```bash
-# Run all tests headless
-npm run test:e2e
-
-# Run with browser UI (interactive)
-npm run test:e2e:ui
-
-# Run headed (visible browser)
-npm run test:e2e:headed
-```
-
-### Test Files
-
-| File | Tests | Coverage |
-|---|---|---|
-| `e2e/homepage.spec.ts` | 4 | Hero section, dashboard cards, nav links, risk radar widget |
-| `e2e/tools.spec.ts` | 12 | All 11 tool pages + tools index |
-| `e2e/currency-pages.spec.ts` | 6 | Currency pair pages, converter, reverse links, 404 handling |
-| `e2e/global-risk-radar.spec.ts` | 3 | Page load, 5 risk categories, methodology |
-| `e2e/api.spec.ts` | 3 | Valid conversion, missing params, invalid codes |
-| `e2e/programmatic-pages.spec.ts` | 6 | Compare pages, inflation pages, investment guides |
-
-### CI Workflow
-
-The `.github/workflows/e2e-tests.yml` workflow runs on every push/PR to `main`:
-
-1. Installs dependencies and Playwright Chromium
-2. Builds the Next.js app (`npm run build`)
-3. Starts the production server and waits for it
-4. Runs all Playwright tests
-5. Uploads the test report as a GitHub Actions artifact
-
-### Adding New Tests
-
-```typescript
-// e2e/my-feature.spec.ts
-import { test, expect } from "@playwright/test";
-
-test("my feature loads", async ({ page }) => {
-  await page.goto("/my-feature");
-  await expect(page.locator("h1")).toBeVisible();
-});
-```
-
----
-
-## Adding New Content Pipelines
-
-### 1. Create a New Agent
-
-```typescript
-// agents/crypto-agent.ts
-import { generateWithClaude } from "@/lib/ai/client";
-
-const SYSTEM_PROMPT = `You are a crypto analyst...`;
-
-export async function fetchCryptoData() {
-  // Fetch from an API
-}
-
-export async function generateCryptoArticle(data: any) {
-  const prompt = `Write an article about...`;
-  const response = await generateWithClaude(SYSTEM_PROMPT, prompt);
-  // Parse and return article
-}
-
-export const cryptoAgent = {
-  name: "crypto-agent",
-  fetchCryptoData,
-  generateCryptoArticle,
-};
-```
-
-### 2. Add to Generation Script
-
-Edit `scripts/generate-article.ts` and add your agent to the generators array:
-
-```typescript
-import { cryptoAgent } from "../agents/crypto-agent";
-
-const generators = [
-  () => generateNewsArticle(newsItems),
-  () => generateCurrencyArticle(),
-  () => generateMacroArticle(),
-  () => generateCryptoArticle(),  // Add new generator
-];
-```
-
-### 3. Create Content Category
-
-```bash
-mkdir -p content/crypto
-```
-
-### 4. Add a Page Route
-
-Create `app/crypto/page.tsx` to display the new content category.
-
----
-
-## Adding New Financial Tools
-
-### 1. Create the Component
-
-```typescript
-// components/tools/MortgageCalculator.tsx
-"use client";
-
-import { useState } from "react";
-
-export function MortgageCalculator() {
-  const [principal, setPrincipal] = useState("300000");
-  // ... calculator logic
-  return (
-    <div className="card max-w-lg mx-auto">
-      {/* Calculator UI */}
-    </div>
-  );
-}
-```
-
-### 2. Create the Page
-
-```typescript
-// app/tools/mortgage-calculator/page.tsx
-import { MortgageCalculator } from "@/components/tools/MortgageCalculator";
-
-export const metadata = {
-  title: "Mortgage Calculator",
-  description: "Calculate your monthly mortgage payments...",
-};
-
-export default function MortgageCalculatorPage() {
-  return (
-    <div className="container-main py-12">
-      <MortgageCalculator />
-      {/* Add schema markup */}
-    </div>
-  );
-}
-```
-
-### 3. Add to Tools Index
-
-Update `app/tools/page.tsx` to include the new tool in the grid.
-
----
-
-## Running Automation Locally
-
-### Full Pipeline
-
-```bash
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your API keys
-
-# Run the complete pipeline
-npm run auto-publish
-```
-
-### Individual Steps
-
-```bash
-# Step 1: Fetch news
-npm run fetch-news
-
-# Step 2: Generate articles (requires AI API keys)
-npm run generate-article
-
-# Step 3: Commit and push
-npm run publish-post
-```
-
-### Custom Article Count
-
-```bash
-ARTICLES_COUNT=5 npm run generate-article
+├── app/                        # Next.js 15 App Router
+│   ├── page.tsx               # Homepage (dashboard + risk radar)
+│   ├── [pair]/                # 6,000+ currency pair pages
+│   ├── compare/               # 20+ asset comparison pages
+│   ├── inflation/             # 30 country inflation trackers
+│   ├── investment/            # 30 investment guide pages
+│   ├── global-risk-radar/     # Risk dashboard
+│   ├── tools/                 # 11 financial calculators
+│   ├── news/, predictions/    # AI-generated content
+│   ├── dashboard/, currencies/
+│   └── api/                   # convert, subscribe endpoints
+├── agents/                    # 6 AI agents
+├── components/
+│   ├── dashboard/             # Dashboard widgets (6)
+│   ├── tools/                 # Calculator components (11)
+│   ├── monetization/          # AdBanner, Affiliate, Newsletter
+│   ├── layout/                # Header, Footer
+│   └── seo/                   # Currency pair converter
+├── lib/                       # Data, API clients, utilities
+│   ├── currency-pairs.ts      # 79 currencies → 6,006 pairs
+│   ├── comparisons.ts         # 20 comparison definitions
+│   ├── inflation-data.ts      # 30 countries
+│   ├── investment-data.ts     # 30 guides
+│   ├── ai/client.ts           # Claude/OpenAI client
+│   └── supabase/              # Database client + schema
+├── scripts/                   # Automation (fetch, generate, publish, SEO)
+├── e2e/                       # 36 Playwright E2E tests
+├── .github/workflows/         # 3 GitHub Actions workflows
+├── content/                   # MDX articles
+└── public/                    # Static assets
 ```
 
 ---
 
 ## Environment Variables
 
-### Required for Full Functionality
-
-| Variable | Description | Required For |
-|----------|-------------|-------------|
-| `ANTHROPIC_API_KEY` | Claude API key | Article generation |
-| `NEWS_API_KEY` | NewsAPI.org key | News fetching |
-| `ALPHA_VANTAGE_API_KEY` | Alpha Vantage key | Market data |
-| `EXCHANGERATE_API_KEY` | ExchangeRate API key | Currency data |
-| `FRED_API_KEY` | FRED API key | Economic indicators |
-
-### Optional
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key (alternative to Claude) |
-| `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | Reddit API for social data |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase database |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin operations |
-| `NEXT_PUBLIC_ADSENSE_CLIENT_ID` | Google AdSense |
-
-### Setting Up GitHub Secrets
-
-For automated publishing, add your API keys as repository secrets:
-
 ```bash
-gh secret set ANTHROPIC_API_KEY --body "your-key"
-gh secret set NEWS_API_KEY --body "your-key"
-gh secret set ALPHA_VANTAGE_API_KEY --body "your-key"
-gh secret set EXCHANGERATE_API_KEY --body "your-key"
-gh secret set FRED_API_KEY --body "your-key"
+cp .env.example .env.local
 ```
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | For AI features | Claude API for article generation |
+| `NEWS_API_KEY` | For news pipeline | News fetching (newsapi.org) |
+| `ALPHA_VANTAGE_API_KEY` | For market data | Stock/forex data |
+| `EXCHANGERATE_API_KEY` | For live rates | Currency conversion |
+| `FRED_API_KEY` | For economic data | GDP, CPI, employment |
+| `NEXT_PUBLIC_SUPABASE_URL` | For database | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | For database | Supabase anonymous key |
+| `NEXT_PUBLIC_ADSENSE_CLIENT_ID` | For ads | Google AdSense |
+
+> **All variables are optional.** The platform falls back to demo data when keys are missing.
 
 ---
 
@@ -578,64 +303,100 @@ gh secret set FRED_API_KEY --body "your-key"
 
 ### Vercel (Recommended)
 
-1. Connect your GitHub repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Every push to `main` triggers automatic deployment
-4. GitHub Actions auto-publish creates commits → triggers Vercel deploy
+1. Fork this repo
+2. Connect to [Vercel](https://vercel.com)
+3. Add environment variables in Vercel dashboard
+4. Every push to `main` auto-deploys
 
-### Manual Build
+### Self-hosted
 
 ```bash
 npm run build
-npm start
+npm start   # → http://localhost:3000
 ```
 
 ---
 
 ## Monetization
 
-### Google AdSense
+This platform is designed to generate revenue from day one. See the full **[Revenue & Monetization Playbook →](MONETIZATION.md)** for:
 
-The `AdBanner` component is pre-built for AdSense integration:
+- 6 revenue streams with real math (ads, affiliates, newsletter, API, sponsorships, digital products)
+- Traffic projections from 10K to 1M monthly pageviews
+- Implementation roadmap (Phase 1–5)
+- Operating cost breakdown ($50–$170/month)
 
+**TL;DR revenue potential:**
+
+| Monthly Traffic | Conservative Revenue |
+|---|---|
+| 50K pageviews | $850/month |
+| 300K pageviews | $10,400/month |
+| 1M pageviews | $53,000/month |
+
+Built-in monetization components:
 ```typescript
-import { AdBanner } from "@/components/monetization/AdBanner";
-
-// In any page or article
-<AdBanner slot="your-ad-slot-id" format="auto" />
+<AdBanner slot="your-slot" format="auto" />          // Display ads
+<AffiliateSection links={[...]} />                    // Affiliate links
+<NewsletterSignup />                                   // Email capture
 ```
 
-Set `NEXT_PUBLIC_ADSENSE_CLIENT_ID` in your environment variables.
+---
 
-### Affiliate Links
+## SEO Strategy
 
-Use the `AffiliateSection` component:
+See the full **[SEO Playbook →](SEO-PLAYBOOK.md)** for the technical breakdown of how 6,200+ pages are generated, indexed, and ranked.
 
-```typescript
-import { AffiliateSection } from "@/components/monetization/AffiliateSection";
+Key strategies:
+- **Programmatic page generation** — scripts create static params for every currency pair, country, and guide
+- **JSON-LD schema markup** — FAQPage, WebApplication, and FinancialProduct schemas on every page
+- **Internal linking mesh** — every page links to related pages (reverse pairs, same-category guides)
+- **ISR (Incremental Static Regeneration)** — pages revalidate every 24 hours for fresh data
+- **Automated content velocity** — daily AI articles compound organic keyword coverage
 
-<AffiliateSection
-  links={[
-    {
-      name: "Trading Platform",
-      description: "Commission-free stock trading",
-      url: "https://example.com/ref/id",
-      category: "Trading",
-    },
-  ]}
-/>
-```
+---
 
-### Newsletter
+## Contributing
 
-The `NewsletterSignup` component captures emails and stores them in Supabase.
+We welcome contributions! See **[CONTRIBUTING.md →](CONTRIBUTING.md)** for:
+
+- How to add new financial tools
+- How to add new AI agents
+- How to add programmatic page types
+- PR guidelines and code standards
+
+**Good first contributions:**
+- Add a new currency pair comparison page
+- Add a new financial calculator tool
+- Add a new country to inflation tracking
+- Improve existing E2E test coverage
+
+---
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [README.md](README.md) | This file — project overview and quick start |
+| [MONETIZATION.md](MONETIZATION.md) | Revenue playbook with 6 streams and projections |
+| [SEO-PLAYBOOK.md](SEO-PLAYBOOK.md) | Technical SEO strategy and programmatic page guide |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute: tools, agents, pages, tests |
+| [LICENSE](LICENSE) | MIT License |
 
 ---
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE). Use it, fork it, build on it. A star ⭐ is appreciated if you find this useful.
 
 ---
 
-Built with ❤️ by [SphereVista360](https://spherevista360.com)
+<div align="center">
+
+**Built by [SphereVista360](https://spherevista360.com)**
+
+If this project helped you, consider giving it a ⭐ — it helps others discover it.
+
+[Report Bug](https://github.com/kdaiops06/spherevista360-ai/issues) · [Request Feature](https://github.com/kdaiops06/spherevista360-ai/issues) · [Discussions](https://github.com/kdaiops06/spherevista360-ai/discussions)
+
+</div>
