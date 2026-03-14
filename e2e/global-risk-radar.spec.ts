@@ -11,11 +11,12 @@ test.describe("Global Risk Radar", () => {
 
   test("displays all 5 risk categories", async ({ page }) => {
     await page.goto("/global-risk-radar");
-    await expect(page.getByText("Recession Risk")).toBeVisible();
-    await expect(page.getByText("Inflation Risk")).toBeVisible();
-    await expect(page.getByText("Currency Crisis Risk")).toBeVisible();
-    await expect(page.getByText("Geopolitical Risk")).toBeVisible();
-    await expect(page.getByText("Debt Crisis Risk")).toBeVisible();
+    const main = page.locator("main");
+    await expect(main.getByText("Recession Risk").first()).toBeVisible();
+    await expect(main.getByText("Inflation Risk").first()).toBeVisible();
+    await expect(main.getByText("Currency Crisis Risk").first()).toBeVisible();
+    await expect(main.getByText("Geopolitical Risk").first()).toBeVisible();
+    await expect(main.getByText("Debt Crisis Risk").first()).toBeVisible();
   });
 
   test("shows methodology section", async ({ page }) => {

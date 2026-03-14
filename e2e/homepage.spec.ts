@@ -5,14 +5,14 @@ test.describe("Homepage", () => {
     await page.goto("/");
     await expect(page).toHaveTitle(/SphereVista360/i);
     await expect(
-      page.getByRole("heading", { name: /Financial Intelligence/i })
+      page.getByRole("heading", { name: /Financial Intelligence/i }).first()
     ).toBeVisible();
   });
 
   test("displays dashboard preview cards", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Market Overview")).toBeVisible();
-    await expect(page.getByText("Currency Strength")).toBeVisible();
+    await expect(page.getByText("Market Overview").first()).toBeVisible();
+    await expect(page.getByText("Currency Strength").first()).toBeVisible();
   });
 
   test("has working navigation links", async ({ page }) => {

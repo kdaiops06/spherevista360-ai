@@ -8,9 +8,9 @@ test.describe("Tools Pages", () => {
       page.getByRole("heading", { name: /Financial Tools/i })
     ).toBeVisible();
     // Check for key tools
-    await expect(page.getByText("Currency Converter")).toBeVisible();
-    await expect(page.getByText("SIP Calculator")).toBeVisible();
-    await expect(page.getByText("Compound Interest")).toBeVisible();
+    await expect(page.getByText("Currency Converter").first()).toBeVisible();
+    await expect(page.getByText("SIP Calculator").first()).toBeVisible();
+    await expect(page.getByText("Compound Interest").first()).toBeVisible();
   });
 
   test("currency converter page loads and has form", async ({ page }) => {

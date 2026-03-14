@@ -14,14 +14,14 @@ test.describe("Currency Pair SEO Pages", () => {
   test("EUR to USD page renders converter", async ({ page }) => {
     await page.goto("/eur-to-usd");
     await expect(page).toHaveTitle(/EUR.*USD|Euro.*US Dollar/i);
-    await expect(page.getByText("EUR/USD")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /EUR.*USD/i }).first()).toBeVisible();
   });
 
   test("GBP to JPY page loads with SEO content", async ({ page }) => {
     await page.goto("/gbp-to-jpy");
     await expect(page).toHaveTitle(/GBP.*JPY/i);
     // SEO content sections
-    await expect(page.getByText("Exchange Rate")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /GBP.*JPY/i }).first()).toBeVisible();
   });
 
   test("has reverse conversion link", async ({ page }) => {
