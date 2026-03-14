@@ -15,39 +15,7 @@ import { PredictionsCard } from "@/components/dashboard/PredictionsCard";
 import { LatestNewsCard } from "@/components/dashboard/LatestNewsCard";
 import { ToolsGrid } from "@/components/dashboard/ToolsGrid";
 import { NewsletterSignup } from "@/components/monetization/NewsletterSignup";
-import type { MarketData, CurrencyStrength, AIPrediction, NewsItem } from "@/types";
-
-// Demo data for initial render - replaced by live data once APIs are configured
-const demoMarketData: MarketData[] = [
-  { symbol: "SPY", name: "S&P 500 ETF", price: 5842.15, change: 23.4, changePercent: 0.42, lastUpdated: new Date().toISOString() },
-  { symbol: "DIA", name: "Dow Jones ETF", price: 43215.80, change: -45.2, changePercent: -0.10, lastUpdated: new Date().toISOString() },
-  { symbol: "QQQ", name: "Nasdaq 100 ETF", price: 20124.50, change: 98.7, changePercent: 0.49, lastUpdated: new Date().toISOString() },
-  { symbol: "GLD", name: "Gold ETF", price: 2952.30, change: 12.1, changePercent: 0.41, lastUpdated: new Date().toISOString() },
-  { symbol: "BTC-USD", name: "Bitcoin", price: 87420.00, change: -1205.0, changePercent: -1.36, lastUpdated: new Date().toISOString() },
-];
-
-const demoCurrencyStrength: CurrencyStrength[] = [
-  { currency: "USD", strength: 72, change24h: 0.3, trend: "up" },
-  { currency: "EUR", strength: 55, change24h: -0.2, trend: "down" },
-  { currency: "GBP", strength: 60, change24h: 0.1, trend: "up" },
-  { currency: "JPY", strength: 35, change24h: -0.8, trend: "down" },
-  { currency: "CHF", strength: 68, change24h: 0.5, trend: "up" },
-  { currency: "AUD", strength: 45, change24h: -0.4, trend: "down" },
-];
-
-const demoPredictions: AIPrediction[] = [
-  { asset: "S&P 500", prediction: "bullish", confidence: 0.72, timeframe: "1 month", reasoning: "Earnings momentum and stable rates support continued upside.", generatedAt: new Date().toISOString() },
-  { asset: "Gold", prediction: "bullish", confidence: 0.65, timeframe: "3 months", reasoning: "Geopolitical uncertainty and inflation hedging driving demand.", generatedAt: new Date().toISOString() },
-  { asset: "EUR/USD", prediction: "neutral", confidence: 0.55, timeframe: "1 week", reasoning: "ECB and Fed policy convergence limits directional moves.", generatedAt: new Date().toISOString() },
-  { asset: "Bitcoin", prediction: "bullish", confidence: 0.60, timeframe: "1 month", reasoning: "Institutional adoption and halving cycle support price.", generatedAt: new Date().toISOString() },
-];
-
-const demoNews: NewsItem[] = [
-  { title: "Fed Signals Patience on Rate Cuts Amid Sticky Inflation", description: "", url: "#", source: "Reuters", publishedAt: new Date().toISOString(), category: "finance" },
-  { title: "Tech Stocks Rally as AI Spending Accelerates", description: "", url: "#", source: "Bloomberg", publishedAt: new Date().toISOString(), category: "finance" },
-  { title: "Oil Prices Surge on Middle East Supply Concerns", description: "", url: "#", source: "CNBC", publishedAt: new Date().toISOString(), category: "finance" },
-  { title: "ECB Holds Rates Steady, Eyes June for Next Move", description: "", url: "#", source: "Financial Times", publishedAt: new Date().toISOString(), category: "finance" },
-];
+import { getMarketData, getCurrencyStrength, getPredictions, getLatestNews } from "@/lib/fetch-live-data";
 
 const features = [
   {
@@ -82,7 +50,14 @@ const features = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [market, currency, preds, news] = await Promise.all([
+    getMarketData(),
+    getCurrencyStrength(),
+    getPredictions(),
+    getLatestNews(),
+  ]);
+
   return (
     <>
       {/* Hero */}
@@ -130,12 +105,12 @@ export default function HomePage() {
       <section className="container-main py-16">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <MarketOverview data={demoMarketData} />
-            <LatestNewsCard news={demoNews} />
+            <MarketOverview data={market.data} />
+            <LatestNewsCard news={news.news} />
           </div>
           <div className="space-y-6">
-            <CurrencyStrengthCard data={demoCurrencyStrength} />
-            <PredictionsCard predictions={demoPredictions} />
+            <CurrencyStrengthCard data={currency.data} />
+            <PredictionsCard predictions={preds.predictions} />
             <ToolsGrid />
           </div>
         </div>

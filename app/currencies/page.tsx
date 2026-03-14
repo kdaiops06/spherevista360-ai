@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CurrencyStrengthCard } from "@/components/dashboard/CurrencyStrengthCard";
-import type { CurrencyStrength, CurrencyRate } from "@/types";
+import { getCurrencyRates, getCurrencyStrength } from "@/lib/fetch-live-data";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -9,30 +9,12 @@ export const metadata: Metadata = {
     "Live currency exchange rates, strength analysis, and forex market insights. Track major currency pairs and global forex trends.",
 };
 
-// Demo data - replaced by live API data when configured
-const demoCurrencies: CurrencyStrength[] = [
-  { currency: "USD", strength: 72, change24h: 0.3, trend: "up" },
-  { currency: "EUR", strength: 55, change24h: -0.2, trend: "down" },
-  { currency: "GBP", strength: 60, change24h: 0.1, trend: "up" },
-  { currency: "JPY", strength: 35, change24h: -0.8, trend: "down" },
-  { currency: "CHF", strength: 68, change24h: 0.5, trend: "up" },
-  { currency: "AUD", strength: 45, change24h: -0.4, trend: "down" },
-  { currency: "CAD", strength: 52, change24h: 0.1, trend: "stable" },
-  { currency: "NZD", strength: 40, change24h: -0.3, trend: "down" },
-];
+export default async function CurrenciesPage() {
+  const [ratesResult, strengthResult] = await Promise.all([
+    getCurrencyRates(),
+    getCurrencyStrength(),
+  ]);
 
-const demoRates: CurrencyRate[] = [
-  { base: "USD", target: "EUR", rate: 0.9234, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "GBP", rate: 0.7891, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "JPY", rate: 149.85, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "CHF", rate: 0.8812, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "AUD", rate: 1.5423, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "CAD", rate: 1.3567, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "CNY", rate: 7.2341, lastUpdated: new Date().toISOString() },
-  { base: "USD", target: "INR", rate: 83.42, lastUpdated: new Date().toISOString() },
-];
-
-export default function CurrenciesPage() {
   return (
     <div className="container-main py-12">
       <div className="mb-10">
@@ -63,7 +45,7 @@ export default function CurrenciesPage() {
                 </tr>
               </thead>
               <tbody>
-                {demoRates.map((rate) => (
+                {ratesResult.rates.map((rate) => (
                   <tr key={rate.target} className="border-b border-gray-100">
                     <td className="py-3 font-medium text-gray-900">
                       {rate.base}/{rate.target}
@@ -79,7 +61,7 @@ export default function CurrenciesPage() {
         </div>
 
         {/* Currency Strength */}
-        <CurrencyStrengthCard data={demoCurrencies} />
+        <CurrencyStrengthCard data={strengthResult.data} />
       </div>
 
       <div className="mt-8 text-center">
