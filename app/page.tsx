@@ -8,12 +8,14 @@ import {
   Newspaper,
   BarChart3,
   Shield,
+  AlertTriangle,
 } from "lucide-react";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { CurrencyStrengthCard } from "@/components/dashboard/CurrencyStrengthCard";
 import { PredictionsCard } from "@/components/dashboard/PredictionsCard";
 import { LatestNewsCard } from "@/components/dashboard/LatestNewsCard";
 import { ToolsGrid } from "@/components/dashboard/ToolsGrid";
+import GlobalRiskRadar from "@/components/dashboard/GlobalRiskRadar";
 import { NewsletterSignup } from "@/components/monetization/NewsletterSignup";
 import { getMarketData, getCurrencyStrength, getPredictions, getLatestNews } from "@/lib/fetch-live-data";
 
@@ -111,6 +113,7 @@ export default async function HomePage() {
           <div className="space-y-6">
             <CurrencyStrengthCard data={currency.data} />
             <PredictionsCard predictions={preds.predictions} />
+            <GlobalRiskRadar compact />
             <ToolsGrid />
           </div>
         </div>

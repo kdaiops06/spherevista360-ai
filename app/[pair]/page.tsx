@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import {
   CURRENCY_LIST,
   generateAllPairs,
@@ -282,12 +283,12 @@ export default async function CurrencyPairPage({ params }: Props) {
 
           {/* Back to tools */}
           <div className="text-center py-4">
-            <a
+            <Link
               href="/tools"
               className="text-indigo-600 hover:text-indigo-800 font-medium"
             >
               ← Back to All Tools
-            </a>
+            </Link>
           </div>
         </div>
       </div>

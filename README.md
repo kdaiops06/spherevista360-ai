@@ -20,6 +20,9 @@ A fully automated finance news and analytics platform capable of generating pass
 - [AI Agents](#ai-agents)
 - [Automation Pipeline](#automation-pipeline)
 - [Financial Tools](#financial-tools)
+- [Programmatic SEO](#programmatic-seo)
+- [Global Risk Radar](#global-risk-radar)
+- [E2E Testing](#e2e-testing)
 - [Adding New Content Pipelines](#adding-new-content-pipelines)
 - [Adding New Financial Tools](#adding-new-financial-tools)
 - [Running Automation Locally](#running-automation-locally)
@@ -41,7 +44,7 @@ A fully automated finance news and analytics platform capable of generating pass
 ┌──────────────────────────────────────────────────────────┐
 │                    AI AGENTS                             │
 │  news-agent │ currency-agent │ macro-agent │ seo-agent  │
-│         prediction-agent                                │
+│  prediction-agent │ content-agent                       │
 │  Powered by: Claude API + OpenAI API                    │
 └──────────┬───────────────────────────────────────────────┘
            │
@@ -62,7 +65,10 @@ A fully automated finance news and analytics platform capable of generating pass
 ┌──────────────────────────────────────────────────────────┐
 │                 NEXT.JS 15 FRONTEND                      │
 │  Dashboard │ News │ Currencies │ Predictions │ Tools    │
+│  Risk Radar │ Comparisons │ Inflation │ Investment      │
+│  6000+ Currency Pair Pages (Programmatic SEO)           │
 │  SEO │ Structured Data │ AdSense │ Affiliates           │
+│  E2E Tests: Playwright │ CI: GitHub Actions             │
 │  Hosted on: Vercel (auto-deploy on push)                │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -272,6 +278,127 @@ All tools are:
 - **Client-side rendered** for instant interactivity
 - **SEO optimized** with schema markup (WebApplication type)
 - **Mobile responsive** with accessible form inputs
+
+---
+
+## Programmatic SEO
+
+The platform generates **6,000+ optimized pages** automatically for organic search traffic:
+
+### Currency Pair Pages (6,006 pages)
+
+Every combination of 78 world currencies gets a dedicated converter page at `/currencies/[pair]` (e.g., `/currencies/usd-to-inr`).
+
+- **Generation script:** `scripts/generate-currency-pages.ts` creates static params
+- **Dynamic route:** `app/currencies/[pair]/page.tsx` with ISR (24h revalidation)
+- **SEO features:** Unique `<title>`, `<meta description>`, JSON-LD `FAQPage` schema, canonical URLs, reverse-pair links
+- **Internal linking:** Each page links to related pairs and the reverse conversion
+
+### Comparison Pages (20+ pages)
+
+Asset-vs-asset comparison guides at `/compare/[slug]` (e.g., `/compare/gold-vs-bitcoin`).
+
+- **Data source:** `lib/comparisons.ts` — 20 pairs across 9 categories (precious-metals, crypto, stocks, savings, currency, real-assets, commodities, insurance, retirement)
+- **Index page:** `/compare` lists all comparisons grouped by category
+- **SEO features:** Comparison table, FAQ JSON-LD, related comparisons, category-specific content
+
+### Inflation Pages (30 pages)
+
+Country-specific inflation tracker pages at `/inflation/[slug]` (e.g., `/inflation/united-states-inflation-rate`).
+
+- **Data source:** `lib/inflation-data.ts` — 30 countries with current rate, target rate, central bank, currency
+- **Features:** Rate vs. target deviation, status indicator (above/below/on target), related countries grid
+- **SEO features:** FAQ JSON-LD, structured data, educational content
+
+### Investment Guide Pages (30 pages)
+
+Beginner-to-advanced investment guides at `/investment/[slug]` (e.g., `/investment/how-to-start-investing`).
+
+- **Data source:** `lib/investment-data.ts` — 30 guides across 10 categories (beginner, stocks, fixed-income, real-estate, crypto, commodities, retirement, tax, forex, alternative)
+- **Features:** Risk level badge, quick facts (min investment, time horizon), category-specific content
+- **SEO features:** FAQ JSON-LD, related guides
+
+### SEO Scripts
+
+```bash
+# Generate all programmatic SEO pages
+npm run generate:seo
+
+# Individual scripts
+npx tsx scripts/generate-currency-pages.ts
+npx tsx scripts/generate-seo-pages.ts
+```
+
+---
+
+## Global Risk Radar
+
+The **Global Risk Radar** (`/global-risk-radar`) provides a composite risk dashboard tracking 5 macro risk categories:
+
+| Category | What It Measures |
+|---|---|
+| Recession Risk | GDP contraction probability, yield curve signals |
+| Inflation Risk | CPI deviation from targets, supply chain stress |
+| Currency Crisis | Exchange rate volatility, reserve adequacy |
+| Geopolitical Risk | Conflict indices, trade disruption signals |
+| Debt Crisis | Sovereign debt levels, credit default swap spreads |
+
+- **Component:** `components/dashboard/GlobalRiskRadar.tsx`
+- **Compact mode:** `<GlobalRiskRadar compact />` renders a sidebar widget (used on homepage)
+- **Full page:** `/global-risk-radar` with methodology explanation, JSON-LD schema, educational content
+- **Score range:** 0–100 per category → composite weighted average → severity label (Low / Moderate / High / Critical)
+
+---
+
+## E2E Testing
+
+End-to-end tests use **Playwright** with Chromium. Tests cover all major routes, tools, API endpoints, and programmatic pages.
+
+### Test Commands
+
+```bash
+# Run all tests headless
+npm run test:e2e
+
+# Run with browser UI (interactive)
+npm run test:e2e:ui
+
+# Run headed (visible browser)
+npm run test:e2e:headed
+```
+
+### Test Files
+
+| File | Tests | Coverage |
+|---|---|---|
+| `e2e/homepage.spec.ts` | 4 | Hero section, dashboard cards, nav links, risk radar widget |
+| `e2e/tools.spec.ts` | 12 | All 11 tool pages + tools index |
+| `e2e/currency-pages.spec.ts` | 6 | Currency pair pages, converter, reverse links, 404 handling |
+| `e2e/global-risk-radar.spec.ts` | 3 | Page load, 5 risk categories, methodology |
+| `e2e/api.spec.ts` | 3 | Valid conversion, missing params, invalid codes |
+| `e2e/programmatic-pages.spec.ts` | 6 | Compare pages, inflation pages, investment guides |
+
+### CI Workflow
+
+The `.github/workflows/e2e-tests.yml` workflow runs on every push/PR to `main`:
+
+1. Installs dependencies and Playwright Chromium
+2. Builds the Next.js app (`npm run build`)
+3. Starts the production server and waits for it
+4. Runs all Playwright tests
+5. Uploads the test report as a GitHub Actions artifact
+
+### Adding New Tests
+
+```typescript
+// e2e/my-feature.spec.ts
+import { test, expect } from "@playwright/test";
+
+test("my feature loads", async ({ page }) => {
+  await page.goto("/my-feature");
+  await expect(page.locator("h1")).toBeVisible();
+});
+```
 
 ---
 
