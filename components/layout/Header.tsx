@@ -16,6 +16,7 @@ const navigation = [
   { name: "Currencies", href: "/currencies", icon: Globe },
   { name: "Predictions", href: "/predictions", icon: Brain },
   { name: "Tools", href: "/tools", icon: Wrench },
+  { name: "Premium", href: "/premium", icon: Brain },
   { name: "Dashboard", href: "/dashboard", icon: TrendingUp },
 ];
 

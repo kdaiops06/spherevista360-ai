@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRightLeft, Calculator, TrendingUp, DollarSign, BarChart3, Globe, AlertTriangle, TrendingDown, Coins } from "lucide-react";
+import { ArrowRightLeft, Calculator, TrendingUp, DollarSign, BarChart3, Globe, AlertTriangle, TrendingDown, Coins, Brain, Shield } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Financial Tools - Free Calculators & Trackers",
@@ -85,6 +85,34 @@ const tools = [
     href: "/tools/gold-vs-dollar",
     icon: Coins,
     color: "bg-amber-100 text-amber-700",
+  },
+  {
+    name: "Currency Forecast Engine",
+    description: "AI-powered forecasts for USD/INR, EUR/USD, and Gold vs Dollar.",
+    href: "/tools/currency-forecast",
+    icon: Brain,
+    color: "bg-violet-100 text-violet-700",
+  },
+  {
+    name: "Global Stress Index",
+    description: "Track a single global macro stress score updated from key indicators.",
+    href: "/tools/global-stress-index",
+    icon: AlertTriangle,
+    color: "bg-rose-100 text-rose-700",
+  },
+  {
+    name: "Portfolio Risk Scanner",
+    description: "Scan diversification, volatility, and cross-asset correlation risks.",
+    href: "/tools/portfolio-risk-scanner",
+    icon: Shield,
+    color: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    name: "Currency Crisis Detector",
+    description: "Identify high-risk currencies using inflation, debt, and reserve stress.",
+    href: "/tools/currency-crisis-detector",
+    icon: TrendingDown,
+    color: "bg-red-100 text-red-700",
   },
 ];
 

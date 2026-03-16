@@ -121,6 +121,8 @@ export async function fetchFredSeries(
     GDP: ["Gross Domestic Product", "Billions USD"],
     FEDFUNDS: ["Federal Funds Rate", "%"],
     DGS10: ["10-Year Treasury Rate", "%"],
+    DGS2: ["2-Year Treasury Rate", "%"],
+    T10Y2Y: ["10Y-2Y Treasury Spread", "%"],
     T10YIE: ["10-Year Breakeven Inflation", "%"],
   };
 

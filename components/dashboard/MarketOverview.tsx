@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { cn, formatCurrency, formatPercent } from "@/lib/utils";
+import { cn, formatCurrency, formatNumber, formatPercent } from "@/lib/utils";
 import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { MarketData } from "@/types";
 
@@ -8,6 +8,18 @@ interface MarketOverviewProps {
   isLive?: boolean;
   source?: string;
   lastUpdated?: string;
+}
+
+function formatMarketValue(item: MarketData) {
+  if (item.symbol === "^TNX" || item.name.toLowerCase().includes("yield")) {
+    return `${item.price.toFixed(2)}%`;
+  }
+
+  if (item.symbol.startsWith("^")) {
+    return formatNumber(Number(item.price.toFixed(2)));
+  }
+
+  return formatCurrency(item.price);
 }
 
 export function MarketOverview({ data, isLive = false, source, lastUpdated }: MarketOverviewProps) {
@@ -31,7 +43,7 @@ export function MarketOverview({ data, isLive = false, source, lastUpdated }: Ma
             </div>
             <div className="text-right">
               <p className="font-semibold text-gray-900">
-                {formatCurrency(item.price)}
+                {formatMarketValue(item)}
               </p>
               <div
                 className={cn(

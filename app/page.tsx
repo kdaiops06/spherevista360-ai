@@ -14,10 +14,12 @@ import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { CurrencyStrengthCard } from "@/components/dashboard/CurrencyStrengthCard";
 import { PredictionsCard } from "@/components/dashboard/PredictionsCard";
 import { LatestNewsCard } from "@/components/dashboard/LatestNewsCard";
+import { MarketPulse } from "@/components/dashboard/MarketPulse";
 import { ToolsGrid } from "@/components/dashboard/ToolsGrid";
 import GlobalRiskRadar from "@/components/dashboard/GlobalRiskRadar";
 import { NewsletterSignup } from "@/components/monetization/NewsletterSignup";
 import { getMarketData, getCurrencyStrength, getPredictions, getLatestNews } from "@/lib/fetch-live-data";
+import { buildMarketPulse, getRecessionSignal } from "@/lib/financial-intelligence";
 
 const features = [
   {
@@ -53,12 +55,20 @@ const features = [
 ];
 
 export default async function HomePage() {
-  const [market, currency, preds, news] = await Promise.all([
+  const [market, currency, preds, news, recessionSignal] = await Promise.all([
     getMarketData(),
     getCurrencyStrength(),
     getPredictions(),
     getLatestNews(),
+    getRecessionSignal(),
   ]);
+
+  const pulseItems = buildMarketPulse({
+    marketData: market.data,
+    currencyStrength: currency.data,
+    predictions: preds.data,
+    recessionSignal,
+  });
 
   return (
     <>
@@ -72,16 +82,13 @@ export default async function HomePage() {
               AI-Powered Financial Intelligence
             </div>
             <h1 className="mt-6 text-5xl font-extrabold leading-tight md:text-6xl">
-              Your Complete{" "}
+              AI-Powered{" "}
               <span className="bg-gradient-to-r from-accent-400 to-accent-300 bg-clip-text text-transparent">
-                Financial Intelligence
+                Financial Intelligence Platform
               </span>{" "}
-              Platform
             </h1>
             <p className="mt-6 text-lg text-brand-200 md:text-xl">
-              SphereVista360 delivers AI-generated financial news,
-              market analytics, currency insights, economic predictions, and
-              interactive financial tools — all in one place.
+              Track currencies, markets, inflation, and global risks with real-time AI insights.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
@@ -102,6 +109,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <MarketPulse items={pulseItems} />
 
       {/* Dashboard Preview */}
       <section className="container-main py-16">

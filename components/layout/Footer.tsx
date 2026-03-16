@@ -6,6 +6,7 @@ const footerLinks = {
     { name: "News", href: "/news" },
     { name: "Currencies", href: "/currencies" },
     { name: "Predictions", href: "/predictions" },
+    { name: "Premium", href: "/premium" },
     { name: "Dashboard", href: "/dashboard" },
   ],
   Tools: [
@@ -13,6 +14,7 @@ const footerLinks = {
     { name: "Inflation Calculator", href: "/tools/inflation-calculator" },
     { name: "Compound Interest", href: "/tools/compound-interest" },
     { name: "Purchasing Power", href: "/tools/purchasing-power" },
+    { name: "Currency Forecast", href: "/tools/currency-forecast" },
   ],
   Resources: [
     { name: "About", href: "/about" },
