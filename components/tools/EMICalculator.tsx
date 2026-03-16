@@ -16,10 +16,16 @@ export default function EMICalculator() {
   let totalPayment = 0;
   let totalInterest = 0;
 
-  if (P > 0 && r > 0 && N > 0) {
-    emi = (P * r * Math.pow(1 + r, N)) / (Math.pow(1 + r, N) - 1);
-    totalPayment = emi * N;
-    totalInterest = totalPayment - P;
+  if (P > 0 && N > 0) {
+    if (r > 0) {
+      emi = (P * r * Math.pow(1 + r, N)) / (Math.pow(1 + r, N) - 1);
+      totalPayment = emi * N;
+      totalInterest = totalPayment - P;
+    } else {
+      emi = P / N;
+      totalPayment = P;
+      totalInterest = 0;
+    }
   }
 
   const interestPercent = totalPayment > 0 ? (totalInterest / totalPayment) * 100 : 0;

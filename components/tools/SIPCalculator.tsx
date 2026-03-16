@@ -24,9 +24,17 @@ export function SIPCalculator() {
     const totalMonths = t * 12;
     const yearlyBreakdown: { year: number; invested: number; value: number }[] = [];
 
+    const futureValueForMonths = (months: number) => {
+      if (monthlyRate === 0) {
+        return P * months;
+      }
+
+      return P * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
+    };
+
     for (let y = 1; y <= t; y++) {
       const n = y * 12;
-      const fv = P * ((Math.pow(1 + monthlyRate, n) - 1) / monthlyRate) * (1 + monthlyRate);
+      const fv = futureValueForMonths(n);
       yearlyBreakdown.push({
         year: y,
         invested: Math.round(P * n),
@@ -34,7 +42,7 @@ export function SIPCalculator() {
       });
     }
 
-    const maturityValue = P * ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate) * (1 + monthlyRate);
+    const maturityValue = futureValueForMonths(totalMonths);
     const totalInvested = P * totalMonths;
 
     setResult({

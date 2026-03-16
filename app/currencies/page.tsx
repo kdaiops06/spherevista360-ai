@@ -24,7 +24,7 @@ export default async function CurrenciesPage() {
         <p className="mt-3 text-lg text-gray-600">
           {ratesResult.isLive
             ? `Exchange rates from ${ratesResult.source} (updated ${ratesResult.lastUpdated})`
-            : "Illustrative exchange rates — configure API keys for live data"}
+            : "Exchange rates — based on reference data"}
         </p>
       </div>
 

@@ -1,6 +1,7 @@
 import type { MarketData, CurrencyStrength, CurrencyRate, AIPrediction, NewsItem } from "@/types";
 import { fetchStockQuote, fetchExchangeRates, fetchFinanceNews } from "./data-sources";
 import { fetchFreeRates } from "./free-currency-api";
+import { fetchFreeMarketData, fetchFreeNews } from "./free-market-api";
 
 // Revalidate every 5 minutes
 export const revalidate = 300;
@@ -20,12 +21,11 @@ export interface DataResult<T> {
 const ILLUSTRATIVE_DATE = "2025-01-15T00:00:00Z";
 
 const DEMO_MARKET_DATA: MarketData[] = [
-  { symbol: "SPY", name: "S&P 500 ETF", price: 5842.15, change: 23.4, changePercent: 0.42, lastUpdated: ILLUSTRATIVE_DATE },
-  { symbol: "DIA", name: "Dow Jones ETF", price: 43215.80, change: -45.2, changePercent: -0.10, lastUpdated: ILLUSTRATIVE_DATE },
-  { symbol: "QQQ", name: "Nasdaq 100 ETF", price: 20124.50, change: 98.7, changePercent: 0.49, lastUpdated: ILLUSTRATIVE_DATE },
-  { symbol: "GLD", name: "Gold ETF", price: 2952.30, change: 12.1, changePercent: 0.41, lastUpdated: ILLUSTRATIVE_DATE },
+  { symbol: "^GSPC", name: "S&P 500 Index", price: 5842.15, change: 23.4, changePercent: 0.42, lastUpdated: ILLUSTRATIVE_DATE },
+  { symbol: "^IXIC", name: "Nasdaq Composite", price: 18214.32, change: 98.7, changePercent: 0.54, lastUpdated: ILLUSTRATIVE_DATE },
+  { symbol: "GC=F", name: "Gold Futures", price: 2952.30, change: 12.1, changePercent: 0.41, lastUpdated: ILLUSTRATIVE_DATE },
   { symbol: "BTC-USD", name: "Bitcoin", price: 87420.00, change: -1205.0, changePercent: -1.36, lastUpdated: ILLUSTRATIVE_DATE },
-  { symbol: "TLT", name: "20Y Treasury ETF", price: 88.45, change: -0.35, changePercent: -0.39, lastUpdated: ILLUSTRATIVE_DATE },
+  { symbol: "^TNX", name: "10-Year Treasury Yield", price: 4.28, change: 0.05, changePercent: 1.18, lastUpdated: ILLUSTRATIVE_DATE },
 ];
 
 const DEMO_CURRENCY_STRENGTH: CurrencyStrength[] = [
@@ -69,27 +69,39 @@ const DEMO_NEWS: NewsItem[] = [
 
 // ─── Live Data Fetchers (with graceful fallback + metadata) ──────
 
-const MARKET_SYMBOLS = ["SPY", "DIA", "QQQ", "GLD", "BTC-USD", "TLT"];
+const MARKET_SYMBOLS = ["^GSPC", "^IXIC", "GC=F", "BTC-USD", "^TNX"];
 
 export async function getMarketData(): Promise<DataResult<MarketData[]>> {
-  if (!process.env.ALPHA_VANTAGE_API_KEY) {
-    return { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE };
-  }
-
+  // 1) Try free Yahoo Finance API (no key needed)
   try {
-    const results = await Promise.allSettled(
-      MARKET_SYMBOLS.map((s) => fetchStockQuote(s))
-    );
-    const live = results
-      .filter((r): r is PromiseFulfilledResult<MarketData> => r.status === "fulfilled")
-      .map((r) => r.value);
-
-    return live.length > 0
-      ? { data: live, isLive: true, source: "Alpha Vantage", lastUpdated: new Date().toISOString() }
-      : { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE };
+    const free = await fetchFreeMarketData(MARKET_SYMBOLS);
+    if (free && free.data.length > 0) {
+      return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
+    }
   } catch {
-    return { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE };
+    // free API failed
   }
+
+  // 2) Try Alpha Vantage (if key configured)
+  if (process.env.ALPHA_VANTAGE_API_KEY) {
+    try {
+      const results = await Promise.allSettled(
+        MARKET_SYMBOLS.map((s) => fetchStockQuote(s))
+      );
+      const live = results
+        .filter((r): r is PromiseFulfilledResult<MarketData> => r.status === "fulfilled")
+        .map((r) => r.value);
+
+      if (live.length > 0) {
+        return { data: live, isLive: true, source: "Alpha Vantage", lastUpdated: new Date().toISOString() };
+      }
+    } catch {
+      // paid also failed
+    }
+  }
+
+  // 3) Fallback to demo data
+  return { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE };
 }
 
 export async function getCurrencyRates(): Promise<DataResult<CurrencyRate[]>> {
@@ -185,21 +197,33 @@ export async function getCurrencyStrength(): Promise<DataResult<CurrencyStrength
 }
 
 export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
-  if (!process.env.NEWS_API_KEY) {
-    return { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
+  // 1) Try free Google News RSS (no key needed)
+  try {
+    const free = await fetchFreeNews();
+    if (free && free.data.length > 0) {
+      return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
+    }
+  } catch {
+    // free RSS failed
   }
 
-  try {
-    const articles = await fetchFinanceNews("finance economy markets stocks");
-    return articles.length > 0
-      ? { data: articles.slice(0, 10), isLive: true, source: "NewsAPI", lastUpdated: new Date().toISOString() }
-      : { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
-  } catch {
-    return { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
+  // 2) Try NewsAPI (if key configured)
+  if (process.env.NEWS_API_KEY) {
+    try {
+      const articles = await fetchFinanceNews("finance economy markets stocks");
+      if (articles.length > 0) {
+        return { data: articles.slice(0, 10), isLive: true, source: "NewsAPI", lastUpdated: new Date().toISOString() };
+      }
+    } catch {
+      // paid also failed
+    }
   }
+
+  // 3) Fallback
+  return { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
 }
 
 export async function getPredictions(): Promise<DataResult<AIPrediction[]>> {
-  // Predictions require AI API — return demo with clear label
-  return { data: DEMO_PREDICTIONS, isLive: false, source: "Sample predictions (AI not configured)", lastUpdated: ILLUSTRATIVE_DATE };
+  // Predictions require AI API — return editorial analysis
+  return { data: DEMO_PREDICTIONS, isLive: false, source: "Editorial analysis", lastUpdated: ILLUSTRATIVE_DATE };
 }

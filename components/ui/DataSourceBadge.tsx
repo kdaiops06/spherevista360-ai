@@ -18,6 +18,22 @@ export function DataSourceBadge({ isLive, source, lastUpdated }: DataSourceBadge
       })
     : null;
 
+  const fallbackLabel = source?.toLowerCase().includes("editorial")
+    ? "Editorial"
+    : source?.toLowerCase().includes("estimated")
+    ? "Estimated"
+    : source?.toLowerCase().includes("reference")
+    ? "Reference Data"
+    : "Illustrative Data";
+
+  const fallbackTone = source?.toLowerCase().includes("editorial")
+    ? "text-blue-600"
+    : source?.toLowerCase().includes("estimated")
+    ? "text-gray-600"
+    : source?.toLowerCase().includes("reference")
+    ? "text-slate-600"
+    : "text-amber-600";
+
   return (
     <div className="flex items-center gap-1.5 text-xs">
       {isLive ? (
@@ -29,9 +45,9 @@ export function DataSourceBadge({ isLive, source, lastUpdated }: DataSourceBadge
           {source && <span className="text-gray-400">via {source}</span>}
         </>
       ) : (
-        <span className="flex items-center gap-1 text-amber-600 font-medium">
+        <span className={"flex items-center gap-1 font-medium " + fallbackTone}>
           <WifiOff className="h-3 w-3" />
-          Illustrative Data
+          {fallbackLabel}
         </span>
       )}
       {formattedTime && (

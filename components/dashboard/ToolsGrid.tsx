@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, Calculator, TrendingUp, DollarSign, BarChart3, Globe, AlertTriangle, TrendingDown, Coins } from "lucide-react";
+import { ArrowRightLeft, Calculator, TrendingUp, DollarSign, BarChart3, Globe, AlertTriangle, TrendingDown, Coins, Brain, Shield } from "lucide-react";
 
 const tools = [
   { name: "Currency Converter", href: "/tools/currency-converter", icon: ArrowRightLeft, color: "text-blue-600 bg-blue-50" },
@@ -12,6 +12,10 @@ const tools = [
   { name: "Recession Tracker", href: "/tools/recession-tracker", icon: AlertTriangle, color: "text-yellow-600 bg-yellow-50" },
   { name: "Currency Crisis", href: "/tools/currency-crisis", icon: TrendingDown, color: "text-orange-600 bg-orange-50" },
   { name: "Gold vs Dollar", href: "/tools/gold-vs-dollar", icon: Coins, color: "text-amber-600 bg-amber-50" },
+  { name: "FX Forecast", href: "/tools/currency-forecast", icon: Brain, color: "text-violet-600 bg-violet-50" },
+  { name: "Stress Index", href: "/tools/global-stress-index", icon: AlertTriangle, color: "text-rose-600 bg-rose-50" },
+  { name: "Portfolio Risk", href: "/tools/portfolio-risk-scanner", icon: Shield, color: "text-emerald-600 bg-emerald-50" },
+  { name: "Crisis Detector", href: "/tools/currency-crisis-detector", icon: TrendingDown, color: "text-red-600 bg-red-50" },
 ];
 
 export function ToolsGrid() {

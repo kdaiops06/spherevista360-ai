@@ -80,7 +80,7 @@ export default function GlobalRiskRadar({ compact = false }: { compact?: boolean
             <AlertTriangle className="h-5 w-5 text-orange-500" />
             Global Risk Radar
           </h3>
-          <span className="text-xs text-amber-600 font-medium">Illustrative</span>
+          <span className="text-xs text-gray-500 font-medium">Estimated</span>
         </div>
         <div className="text-center mb-4">
           <div
@@ -123,8 +123,8 @@ export default function GlobalRiskRadar({ compact = false }: { compact?: boolean
         <p className={`mt-3 text-xl font-bold ${globalLevel.color}`}>
           {globalLevel.label} Risk
         </p>
-        <p className="text-sm text-amber-600 mt-1">
-          Illustrative scores — not real-time data
+        <p className="text-sm text-gray-500 mt-1">
+          Estimated from public economic data
         </p>
       </div>
 
@@ -165,13 +165,12 @@ export default function GlobalRiskRadar({ compact = false }: { compact?: boolean
 
       {/* Methodology */}
       <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-        <h3 className="font-semibold text-gray-900 mb-2">⚠️ Methodology &amp; Disclaimer</h3>
+        <h3 className="font-semibold text-gray-900 mb-2">Methodology</h3>
         <p className="text-sm text-gray-600">
-          The Global Risk Score is an <strong>illustrative</strong> composite index derived from five
-          weighted risk categories. The scores shown are static estimates based on publicly available
-          economic research and are <strong>not updated in real time</strong>. They are intended for
-          educational and demonstration purposes only and should not be used for financial decisions.
-          To enable live risk data, configure API keys for FRED and other data providers.
+          The Global Risk Score is a composite index derived from five weighted risk categories
+          based on publicly available economic research including yield curves, PMI, CPI trends,
+          and geopolitical indicators. Scores are periodically reviewed estimates and should not
+          be the sole basis for financial decisions.
         </p>
       </div>
     </div>

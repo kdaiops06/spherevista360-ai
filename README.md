@@ -53,6 +53,37 @@ Build a self-sustaining, revenue-generating financial content and tools platform
 
 ---
 
+## March 2026 Expansion (Current Branch)
+
+This branch adds the next set of product architecture upgrades for scaling toward a $10K/month target while preserving existing UI structure.
+
+### Added in this branch
+
+- Market Pulse above the fold on homepage (USD trend, Gold trend, S&P outlook, recession signal)
+- Hardened live conversion endpoint (`/api/convert`) with validation and fallback path
+- New tool pages:
+     - `/tools/currency-forecast`
+     - `/tools/global-stress-index`
+     - `/tools/portfolio-risk-scanner`
+     - `/tools/currency-crisis-detector`
+- New SEO landing routes:
+     - `/usd-inr-forecast`
+     - `/us-recession-probability`
+     - `/global-risk-index`
+     - `/gold-vs-dollar`
+     - `/inflation-impact-calculator`
+- Premium plan page at `/premium` with $15/month positioning and feature packaging
+- Improved market feed mapping to direct symbols for S&P 500, Nasdaq, Gold, Bitcoin, and 10Y yield
+- Calculator correctness fixes for SIP (0% return case) and EMI (0% rate case)
+
+### Notes
+
+- New AI/forecast modules are deterministic intelligence models intended for incremental rollout.
+- Existing functionality and route behavior are preserved.
+- Production build passes after this expansion.
+
+---
+
 ## Platform at a Glance
 
 ```
