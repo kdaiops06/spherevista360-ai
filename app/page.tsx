@@ -112,6 +112,26 @@ export default async function HomePage() {
 
       <MarketPulse items={pulseItems} />
 
+      {/* Portfolio Analyzer Promo Section */}
+      <section className="container-main py-12">
+        <div className="rounded-xl bg-brand-50 border border-brand-100 p-8 text-center mb-12">
+          <h2 className="text-2xl md:text-3xl font-bold text-brand-900 mb-2">Analyze Your Portfolio with AI</h2>
+          <p className="text-brand-700 mb-2">
+            See if your portfolio is at risk — and how to optimize it using AI
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Free • No signup required
+          </p>
+          <Link
+            href="/portfolio-analyzer"
+            className="inline-flex items-center gap-2 rounded-lg bg-accent-500 px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-600 shadow-md"
+          >
+            Analyze My Portfolio
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
       {/* Dashboard Preview */}
       <section className="container-main py-16">
         <div className="grid gap-6 lg:grid-cols-3">
