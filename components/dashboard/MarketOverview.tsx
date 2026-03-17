@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn, formatCurrency, formatNumber, formatPercent, calculatePercentageChange, calculateAbsoluteChange } from "@/lib/utils";
-import { MarketRowV2 } from "./MarketRowV2";
+import { MarketRowPremium } from "./MarketRowV2";
 import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { MarketData } from "@/types";
 
@@ -55,10 +55,10 @@ export function MarketOverview({ data, isLive = false, source, lastUpdated }: Ma
       </div>
       <div className="space-y-3">
         {isLoading
-          ? Array.from({ length: 5 }).map((_, i) => <MarketRowV2 key={i} item={{ symbol: '', name: '', price: 0, change: 0, changePercent: 0, lastUpdated: '' }} loading />)
+          ? Array.from({ length: 5 }).map((_, i) => <MarketRowPremium key={i} item={{ symbol: '', name: '', price: 0, change: 0, changePercent: 0, lastUpdated: '' }} loading />)
           : data.map((item) =>
               USE_NEW_UI ? (
-                <MarketRowV2 key={item.symbol} item={item} />
+                <MarketRowPremium key={item.symbol} item={item} />
               ) : (
                 <div
                   key={item.symbol}
