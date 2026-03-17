@@ -1,3 +1,22 @@
+// Safe calculation for percentage change
+export function calculatePercentageChange(current: unknown, previous: unknown): number | null {
+  const curr = Number(current);
+  const prev = Number(previous);
+  if (prev === 0 || isNaN(curr) || isNaN(prev) || prev === null || prev === undefined || curr === null || curr === undefined) {
+    return null;
+  }
+  return ((curr - prev) / prev) * 100;
+}
+
+// Safe calculation for absolute change
+export function calculateAbsoluteChange(current: unknown, previous: unknown): number | null {
+  const curr = Number(current);
+  const prev = Number(previous);
+  if (isNaN(curr) || isNaN(prev) || prev === null || prev === undefined || curr === null || curr === undefined) {
+    return null;
+  }
+  return curr - prev;
+}
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
