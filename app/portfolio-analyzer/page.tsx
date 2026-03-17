@@ -13,6 +13,7 @@ import { Asset } from '../../lib/portfolio/calculations';
 const PortfolioAnalyzerPage: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
+  const [premium, setPremium] = useState(false);
 
   // Wrap setAssets to show loading state
   const handleSetAssets: React.Dispatch<React.SetStateAction<Asset[]>> = (value) => {
@@ -25,7 +26,7 @@ const PortfolioAnalyzerPage: React.FC = () => {
   };
 
   const risk = calculatePortfolioRisk(assets);
-  const suggestions = generatePortfolioSuggestions(assets);
+  const suggestions = generatePortfolioSuggestions(assets, { premium, riskLevel: risk.level });
 
   // Overexposure warning block logic
   let overexposureBlock = null;
@@ -70,7 +71,7 @@ const PortfolioAnalyzerPage: React.FC = () => {
           <PortfolioSuggestions suggestions={suggestions} />
         </>
       )}
-      {!loading && assets.length > 0 && <PremiumFakeDoor />}
+      {!loading && assets.length > 0 && <PremiumFakeDoor onUnlock={() => setPremium(true)} />}
     </main>
   );
 };
