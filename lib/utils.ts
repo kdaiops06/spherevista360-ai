@@ -1,3 +1,47 @@
+// Safe calculation for percentage change (V2, non-breaking)
+export function calculatePercentageChangeV2(current: unknown, previous: unknown): number | null {
+  const curr = Number(String(current).trim());
+  const prev = Number(String(previous).trim());
+  if (
+    curr === null ||
+    curr === undefined ||
+    prev === null ||
+    prev === undefined ||
+    isNaN(curr) ||
+    isNaN(prev) ||
+    prev === 0
+  ) {
+    return null;
+  }
+  return ((curr - prev) / prev) * 100;
+}
+
+// Safe calculation for absolute change (V2, non-breaking)
+export function calculateAbsoluteChangeV2(current: unknown, previous: unknown): number | null {
+  const curr = Number(String(current).trim());
+  const prev = Number(String(previous).trim());
+  if (isNaN(curr) || isNaN(prev)) return null;
+  return curr - prev;
+}
+// Safe calculation for percentage change
+export function calculatePercentageChange(current: unknown, previous: unknown): number | null {
+  const curr = Number(current);
+  const prev = Number(previous);
+  if (prev === 0 || isNaN(curr) || isNaN(prev) || prev === null || prev === undefined || curr === null || curr === undefined) {
+    return null;
+  }
+  return ((curr - prev) / prev) * 100;
+}
+
+// Safe calculation for absolute change
+export function calculateAbsoluteChange(current: unknown, previous: unknown): number | null {
+  const curr = Number(current);
+  const prev = Number(previous);
+  if (isNaN(curr) || isNaN(prev) || prev === null || prev === undefined || curr === null || curr === undefined) {
+    return null;
+  }
+  return curr - prev;
+}
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 

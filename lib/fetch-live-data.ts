@@ -71,15 +71,30 @@ const DEMO_NEWS: NewsItem[] = [
 
 const MARKET_SYMBOLS = ["^GSPC", "^IXIC", "GC=F", "BTC-USD", "^TNX"];
 
+// In-memory cache for market data (5 min)
+let _marketCache: { data: MarketData[]; isLive: boolean; source: string; lastUpdated: string; ts: number } | null = null;
+const CACHE_TTL = 5 * 60 * 1000;
+
 export async function getMarketData(): Promise<DataResult<MarketData[]>> {
+  // Caching: return cached if fresh
+  if (_marketCache && Date.now() - _marketCache.ts < CACHE_TTL) {
+    return { ..._marketCache };
+  }
   // 1) Try free Yahoo Finance API (no key needed)
   try {
     const free = await fetchFreeMarketData(MARKET_SYMBOLS);
-    if (free && free.data.length > 0) {
+    if (free && Array.isArray(free.data) && free.data.length > 0) {
+      // Validate required fields
+      for (const item of free.data) {
+        if (typeof item.price !== "number" || typeof item.change !== "number") {
+          console.warn("Missing price data:", item.symbol, item);
+        }
+      }
+      _marketCache = { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated, ts: Date.now() };
       return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
     }
-  } catch {
-    // free API failed
+  } catch (error) {
+    console.error("Market data fetch failed (free API)", error);
   }
 
   // 2) Try Alpha Vantage (if key configured)
@@ -91,16 +106,22 @@ export async function getMarketData(): Promise<DataResult<MarketData[]>> {
       const live = results
         .filter((r): r is PromiseFulfilledResult<MarketData> => r.status === "fulfilled")
         .map((r) => r.value);
-
+      for (const item of live) {
+        if (typeof item.price !== "number" || typeof item.change !== "number") {
+          console.warn("Missing price data:", item.symbol, item);
+        }
+      }
       if (live.length > 0) {
+        _marketCache = { data: live, isLive: true, source: "Alpha Vantage", lastUpdated: new Date().toISOString(), ts: Date.now() };
         return { data: live, isLive: true, source: "Alpha Vantage", lastUpdated: new Date().toISOString() };
       }
-    } catch {
-      // paid also failed
+    } catch (error) {
+      console.error("Market data fetch failed (Alpha Vantage)", error);
     }
   }
 
   // 3) Fallback to demo data
+  _marketCache = { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE, ts: Date.now() };
   return { data: DEMO_MARKET_DATA, isLive: false, source: "Illustrative data", lastUpdated: ILLUSTRATIVE_DATE };
 }
 
@@ -197,14 +218,18 @@ export async function getCurrencyStrength(): Promise<DataResult<CurrencyStrength
 }
 
 export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
+  console.log('[getLatestNews] Fetching latest news...');
   // 1) Try free Google News RSS (no key needed)
   try {
     const free = await fetchFreeNews();
     if (free && free.data.length > 0) {
+      console.log('[getLatestNews] Using live news from Google News RSS.');
       return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
+    } else {
+      console.warn('[getLatestNews] No live news returned from fetchFreeNews.');
     }
-  } catch {
-    // free RSS failed
+  } catch (err) {
+    console.error('[getLatestNews] Error fetching free news:', err);
   }
 
   // 2) Try NewsAPI (if key configured)
