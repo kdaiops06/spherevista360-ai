@@ -8,17 +8,17 @@ export interface PortfolioRisk {
 
 export function calculatePortfolioRisk(assets: Asset[]): PortfolioRisk {
   const allocation = calculateAllocation(assets);
-
-  // High Risk: Any crypto (BTC, ETH) > 30%
-  if (allocation.some(a => (a.ticker === 'BTC' || a.ticker === 'ETH') && a.percentage > 30)) {
+  if (assets.length === 1) {
     return { score: 80, level: 'High' };
   }
-
-  // Medium Risk: Any single asset > 50%
-  if (allocation.some(a => a.percentage > 50)) {
-    return { score: 60, level: 'Medium' };
+  if (allocation.length > 0) {
+    const maxAlloc = Math.max(...allocation.map(a => a.percentage));
+    if (maxAlloc > 60) {
+      return { score: 70, level: 'High' };
+    }
+    if (maxAlloc > 40) {
+      return { score: 50, level: 'Medium' };
+    }
   }
-
-  // Low Risk: Otherwise
   return { score: 30, level: 'Low' };
 }
