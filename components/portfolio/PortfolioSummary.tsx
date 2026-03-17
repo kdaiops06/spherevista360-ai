@@ -31,6 +31,9 @@ const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({ assets }) => {
         <div style={{ fontSize: 16, color: '#222' }}>
           If market drops 20%, your portfolio may lose <span style={{ fontWeight: 'bold', color: '#b00' }}>${crashLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         </div>
+        <div style={{ fontSize: 13, color: '#666', marginTop: 8 }}>
+          Market volatility can significantly impact concentrated portfolios.
+        </div>
       </div>
     </div>
   );

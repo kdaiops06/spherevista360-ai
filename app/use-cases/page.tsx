@@ -14,9 +14,10 @@ export default function UseCasesPage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Understand Your Portfolio Risk in Seconds</h1>
           <p className="text-lg text-gray-600 mb-6">Get instant insights into your investments, detect concentration risks, and make smarter decisions.</p>
           <Link href="/portfolio-analyzer">
-            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition mb-2">Analyze Your Portfolio →</a>
+            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition mb-2">Analyze Your Portfolio for Free 2</a>
           </Link>
-          <div className="text-xs text-gray-400 mt-2">No signup required</div>
+          <div className="text-xs text-gray-500 mt-2">Used by investors to identify hidden portfolio risks</div>
+          <div className="text-xs text-gray-400 mt-1">No signup required</div>
         </section>
 
         {/* HOW IT WORKS */}
@@ -51,12 +52,12 @@ export default function UseCasesPage() {
               <li>TSLA — 20%</li>
             </ul>
             <div className="mb-2 font-semibold">Analysis Output:</div>
-            <ul className="mb-2 text-sm">
-              <li>⚠️ High concentration in AAPL</li>
-              <li>📉 Potential downside risk highlighted</li>
-              <li>📊 Lack of diversification detected</li>
-            </ul>
-            <div className="text-gray-600 text-sm mt-2">This portfolio is highly exposed to a single stock, increasing overall risk.</div>
+            <div className="space-y-2 text-sm">
+              <div><span role="img" aria-label="warning">⚠️</span> High concentration in AAPL</div>
+              <div><span role="img" aria-label="down">📉</span> Potential downside risk highlighted</div>
+              <div><span role="img" aria-label="chart">📊</span> Lack of diversification detected</div>
+            </div>
+            <div className="text-gray-600 text-sm mt-4">This portfolio is highly exposed to a single stock, increasing overall risk.</div>
           </div>
         </section>
 

@@ -34,22 +34,27 @@ const PremiumFakeDoor: React.FC<PremiumFakeDoorProps> = ({ onUnlock }) => {
       }}
     >
       {!showInput && !submitted && (
-        <button
-          style={{
-            background: '#222',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 4,
-            padding: '10px 20px',
-            fontWeight: 'bold',
-            fontSize: 16,
-            cursor: 'pointer',
-            marginBottom: 8,
-          }}
-          onClick={handleUnlock}
-        >
-          🔒 Unlock Advanced Insights ($9)
-        </button>
+        <>
+          <button
+            style={{
+              background: '#222',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 4,
+              padding: '10px 20px',
+              fontWeight: 'bold',
+              fontSize: 16,
+              cursor: 'pointer',
+              marginBottom: 8,
+            }}
+            onClick={handleUnlock}
+          >
+            🔒 Unlock Advanced Insights ($9)
+          </button>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
+            No signup required to try the analyzer
+          </div>
+        </>
       )}
       {showInput && !submitted && (
         <form onSubmit={handleSubmit} style={{ marginTop: 8 }}>
