@@ -14,22 +14,14 @@ export default function UseCasesPage() {
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Understand Your Portfolio Risk in Seconds</h1>
           <p className="text-lg text-gray-600 mb-6">Get instant insights into your investments, detect concentration risks, and make smarter decisions.</p>
           <Link href="/portfolio-analyzer">
-            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition mb-2">Analyze Your Portfolio for Free 2</a>
+            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition mb-2">Analyze Your Portfolio →</a>
           </Link>
           <div className="text-xs text-gray-400 mt-2">No signup required</div>
-          <div className="text-xs text-gray-500 mt-2">Used by investors to identify hidden portfolio risks</div>
-        </section>
-
-        {/* SEO PARAGRAPH */}
-        <section className="mb-6">
-          <p className="text-sm text-gray-700 text-center">
-            SphereVista360 is a portfolio risk analyzer that helps investors understand asset allocation, detect concentration risk, and improve diversification. Whether you hold stocks, crypto, or ETFs, this investment risk tool provides instant insights into your portfolio.
-          </p>
         </section>
 
         {/* HOW IT WORKS */}
         <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">How the Portfolio Risk Analyzer Works</h2>
+          <h2 className="text-xl font-semibold mb-4 text-center">How It Works</h2>
           <div className="grid gap-6 md:grid-cols-3">
             <div className="bg-white rounded-lg shadow p-4 text-center">
               <div className="text-blue-600 text-2xl mb-2">1</div>
