@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import PremiumFakeDoor from '../../components/portfolio/PremiumFakeDoor';
 import PortfolioInput from '../../components/portfolio/PortfolioInput';
 import PortfolioSummary from '../../components/portfolio/PortfolioSummary';
 import PortfolioRisk from '../../components/portfolio/PortfolioRisk';
@@ -14,15 +15,37 @@ const PortfolioAnalyzerPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   // Wrap setAssets to show loading state
-  const handleSetAssets = (newAssets: Asset[]) => {
+  const handleSetAssets: React.Dispatch<React.SetStateAction<Asset[]>> = (value) => {
     setLoading(true);
-    setAssets(newAssets);
-    setTimeout(() => setLoading(false), 600); // Simulate analysis delay
+    setAssets(prev => {
+      const result = typeof value === 'function' ? (value as (prev: Asset[]) => Asset[])(prev) : value;
+      setTimeout(() => setLoading(false), 600); // Simulate analysis delay
+      return result;
+    });
   };
 
   const risk = calculatePortfolioRisk(assets);
   const suggestions = generatePortfolioSuggestions(assets);
 
+  // Overexposure warning block logic
+  let overexposureBlock = null;
+  if (!loading && assets.length > 0) {
+    // Calculate allocation
+    const total = assets.reduce((sum, a) => sum + a.amount, 0);
+    const allocation = total > 0 ? assets.map(a => ({ ...a, percentage: (a.amount / total) * 100 })) : [];
+    const overAsset = allocation.find(a => a.percentage > 40);
+    if (overAsset) {
+      overexposureBlock = (
+        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 16, margin: '16px 0', color: '#ad6800', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 22 }}>⚠️</span>
+          <span>
+            You are heavily concentrated in {overAsset.ticker} ({overAsset.percentage.toFixed(1)}%).<br />
+            This increases risk during market downturns.
+          </span>
+        </div>
+      );
+    }
+  }
   return (
     <main style={{ maxWidth: 500, margin: '0 auto', padding: 24 }}>
       <PortfolioInput assets={assets} setAssets={handleSetAssets} />
@@ -37,101 +60,17 @@ const PortfolioAnalyzerPage: React.FC = () => {
           <PortfolioSummary assets={assets} />
           <div style={{ height: 24 }} />
           <PortfolioRisk risk={risk} />
+          {overexposureBlock}
           <div style={{ height: 24 }} />
+          <div style={{ margin: '32px 0 8px 0', fontWeight: 'bold', fontSize: 18, letterSpacing: 0.2 }}>
+            Portfolio Insights
+          </div>
           <PortfolioInsights assets={assets} />
           <div style={{ height: 24 }} />
           <PortfolioSuggestions suggestions={suggestions} />
         </>
       )}
       {!loading && assets.length > 0 && <PremiumFakeDoor />}
-    // Monetization test (fake door)
-    const PremiumFakeDoor: React.FC = () => {
-      const [showInput, setShowInput] = useState(false);
-      const [email, setEmail] = useState('');
-      const [submitted, setSubmitted] = useState(false);
-
-      const handleUnlock = () => setShowInput(true);
-      const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (email) {
-          // Log email to console (fake door)
-          // eslint-disable-next-line no-console
-          console.log('Premium interest email:', email);
-          setSubmitted(true);
-        }
-      };
-
-      return (
-        <div
-          style={{
-            marginTop: 32,
-            padding: 16,
-            border: "1px dashed #ccc",
-            borderRadius: 8,
-            textAlign: "center",
-          }}
-        >
-          {!showInput && !submitted && (
-            <button
-              style={{
-                background: '#222',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 4,
-                padding: '10px 20px',
-                fontWeight: 'bold',
-                fontSize: 16,
-                cursor: 'pointer',
-                marginBottom: 8,
-              }}
-              onClick={handleUnlock}
-            >
-              🔒 Unlock Advanced Insights ($9)
-            </button>
-          )}
-          {showInput && !submitted && (
-            <form onSubmit={handleSubmit} style={{ marginTop: 8 }}>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                style={{
-                  padding: '8px',
-                  borderRadius: 4,
-                  border: '1px solid #ccc',
-                  marginRight: 8,
-                  width: 200,
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  background: '#0070f3',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 4,
-                  padding: '8px 16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                }}
-              >
-                Submit
-              </button>
-            </form>
-          )}
-          {submitted && (
-            <div style={{ color: 'green', fontWeight: 'bold', marginTop: 8 }}>
-              Thank you! We'll notify you when advanced insights are available.
-            </div>
-          )}
-          <div style={{ fontSize: 14, color: "#666", marginTop: 8 }}>
-            Get deeper portfolio analysis, AI forecasts, and personalized optimization strategies.
-          </div>
-        </div>
-      );
-    };
     </main>
   );
 };
