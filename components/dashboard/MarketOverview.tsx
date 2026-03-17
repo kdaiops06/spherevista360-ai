@@ -1,5 +1,6 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn, formatCurrency, formatNumber, formatPercent, calculatePercentageChange, calculateAbsoluteChange } from "@/lib/utils";
+import { MarketRowV2 } from "./MarketRowV2";
 import { DataSourceBadge } from "@/components/ui/DataSourceBadge";
 import type { MarketData } from "@/types";
 
@@ -36,7 +37,10 @@ function getMarketStatus(): { open: boolean; label: string } {
     : { open: false, label: "Market Closed" };
 }
 
+
   const marketStatus = getMarketStatus();
+  const USE_NEW_UI = true;
+  const isLoading = !data || data.length === 0;
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
@@ -49,62 +53,26 @@ function getMarketStatus(): { open: boolean; label: string } {
         </div>
       </div>
       <div className="space-y-3">
-        {data.map((item) => {
-          // Defensive: handle missing/invalid data
-          const price = Number(item.price);
-          const prevClose = price - Number(item.change);
-          const percentChange = calculatePercentageChange(price, prevClose);
-          const absChange = calculateAbsoluteChange(price, prevClose);
-          const displayChange =
-            percentChange !== null && !isNaN(percentChange)
-              ? `${percentChange.toFixed(2)}%`
-              : "N/A";
-          const displayAbs =
-            absChange !== null && !isNaN(absChange)
-              ? `(${absChange > 0 ? "+" : ""}${absChange.toFixed(2)})`
-              : "";
-          return (
-            <div
-              key={item.symbol}
-              className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
-            >
-              <div>
-                <p className="font-semibold text-gray-900">{item.symbol}</p>
-                <p className="text-sm text-gray-500">{item.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold text-gray-900">
-                  {formatMarketValue(item)}
-                </p>
+        {isLoading
+          ? Array.from({ length: 5 }).map((_, i) => <MarketRowV2 key={i} item={{ symbol: '', name: '', price: 0, change: 0, changePercent: 0, lastUpdated: '' }} loading />)
+          : data.map((item) =>
+              USE_NEW_UI ? (
+                <MarketRowV2 key={item.symbol} item={item} />
+              ) : (
                 <div
-                  className={cn(
-                    "flex items-center gap-1 text-sm",
-                    percentChange !== null && !isNaN(percentChange)
-                      ? percentChange > 0
-                        ? "text-green-600"
-                        : percentChange < 0
-                        ? "text-red-600"
-                        : "text-gray-500"
-                      : "text-gray-500"
-                  )}
+                  key={item.symbol}
+                  className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3"
                 >
-                  {percentChange !== null && !isNaN(percentChange) ? (
-                    percentChange > 0 ? (
-                      <TrendingUp className="h-3.5 w-3.5" />
-                    ) : percentChange < 0 ? (
-                      <TrendingDown className="h-3.5 w-3.5" />
-                    ) : (
-                      <Minus className="h-3.5 w-3.5" />
-                    )
-                  ) : (
-                    <Minus className="h-3.5 w-3.5" />
-                  )}
-                  {displayChange} {displayAbs}
+                  <div>
+                    <p className="font-semibold text-gray-900">{item.symbol}</p>
+                    <p className="text-sm text-gray-500">{item.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">{formatMarketValue(item)}</p>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              )
+            )}
       </div>
     </div>
   );
