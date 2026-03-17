@@ -11,11 +11,16 @@ const PortfolioSuggestions: React.FC<PortfolioSuggestionsProps> = ({ suggestions
       {suggestions.length === 0 ? (
         <div>Your portfolio looks balanced</div>
       ) : (
-        <ul style={{ paddingLeft: 20 }}>
-          {suggestions.map((s, i) => (
-            <li key={i} style={{ marginBottom: 6 }}>{s}</li>
-          ))}
-        </ul>
+        <>
+          <ul style={{ paddingLeft: 20 }}>
+            {suggestions.map((s, i) => (
+              <li key={i} style={{ marginBottom: 6 }}>{s}</li>
+            ))}
+          </ul>
+          <div style={{ fontSize: 12, color: '#666', marginTop: 10 }}>
+            Well-diversified portfolios typically include multiple assets across sectors.
+          </div>
+        </>
       )}
     </div>
   );
