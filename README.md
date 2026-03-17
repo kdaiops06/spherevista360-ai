@@ -501,3 +501,23 @@ If this project helped you, consider giving it a ⭐ — it helps others discove
 [Report Bug](https://github.com/kdaiops06/spherevista360-ai/issues) · [Request Feature](https://github.com/kdaiops06/spherevista360-ai/issues) · [Discussions](https://github.com/kdaiops06/spherevista360-ai/discussions)
 
 </div>
+
+---
+
+## Portfolio Analyzer (March 2026)
+
+A new end-to-end portfolio analysis suite is now live:
+
+- **Portfolio Analyzer Page:** `/portfolio-analyzer` — Add your assets, see allocation, risk, and get actionable suggestions instantly.
+- **Portfolio Input:** Add assets by ticker and amount (USD). Remove or update assets in real time.
+- **Portfolio Summary:** Visualize your total portfolio value and allocation breakdown by asset.
+- **Portfolio Risk:** Instantly see your risk score and level (Low, Medium, High) based on asset concentration and crypto exposure.
+- **Portfolio Suggestions:** Get AI-powered suggestions to diversify, reduce risk, or add hedging assets (e.g., gold).
+- **Premium Insights Preview:** A new section teases upcoming advanced optimization, forecasts, and personalized strategies.
+- **Homepage CTA:** Prominent call-to-action on the homepage to drive users to the analyzer.
+
+**No signup required.** All calculations run client-side for privacy and speed.
+
+> Try it now: [Analyze Your Portfolio →](https://spherevista360.com/portfolio-analyzer)
+
+---
