@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import PortfolioInput from '../../components/portfolio/PortfolioInput';
 import PortfolioSummary from '../../components/portfolio/PortfolioSummary';
@@ -16,12 +17,16 @@ const PortfolioAnalyzerPage: React.FC = () => {
   return (
     <main style={{ maxWidth: 500, margin: '0 auto', padding: 24 }}>
       <PortfolioInput assets={assets} setAssets={setAssets} />
-      <div style={{ height: 24 }} />
-      <PortfolioSummary assets={assets} />
-      <div style={{ height: 24 }} />
-      <PortfolioRisk risk={risk} />
-      <div style={{ height: 24 }} />
-      <PortfolioSuggestions suggestions={suggestions} />
+      {assets.length > 0 && (
+        <>
+          <div style={{ height: 24 }} />
+          <PortfolioSummary assets={assets} />
+          <div style={{ height: 24 }} />
+          <PortfolioRisk risk={risk} />
+          <div style={{ height: 24 }} />
+          <PortfolioSuggestions suggestions={suggestions} />
+        </>
+      )}
       <div
         style={{
           marginTop: 32,
