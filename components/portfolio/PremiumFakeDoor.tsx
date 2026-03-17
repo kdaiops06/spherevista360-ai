@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 
-const PremiumFakeDoor: React.FC = () => {
+interface PremiumFakeDoorProps {
+  onUnlock?: () => void;
+}
+
+const PremiumFakeDoor: React.FC<PremiumFakeDoorProps> = ({ onUnlock }) => {
   const [showInput, setShowInput] = useState(false);
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  const handleUnlock = () => setShowInput(true);
+  const handleUnlock = () => {
+    setShowInput(true);
+    if (onUnlock) onUnlock();
+  };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
