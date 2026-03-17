@@ -38,10 +38,10 @@ const PortfolioAnalyzerPage: React.FC = () => {
     if (overAsset) {
       overexposureBlock = (
         <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 16, margin: '16px 0', color: '#ad6800', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 22 }}>⚠️</span>
+          <span style={{ fontSize: 22 }}>0</span>
           <span>
             You are heavily concentrated in {overAsset.ticker} ({overAsset.percentage.toFixed(1)}%).<br />
-            This increases risk during market downturns.
+            This exposes you to significant single-stock risk.
           </span>
         </div>
       );
