@@ -27,22 +27,24 @@ const PortfolioAnalyzerPage: React.FC = () => {
           <PortfolioSuggestions suggestions={suggestions} />
         </>
       )}
-      <div
-        style={{
-          marginTop: 32,
-          padding: 16,
-          border: "1px dashed #ccc",
-          borderRadius: 8,
-          textAlign: "center",
-        }}
-      >
-        <p style={{ fontWeight: "bold", marginBottom: 8 }}>
-          🔒 Advanced optimization insights coming soon
-        </p>
-        <p style={{ fontSize: 14, color: "#666" }}>
-          Get deeper portfolio analysis, AI forecasts, and personalized optimization strategies.
-        </p>
-      </div>
+      {assets.length > 0 && (
+        <div
+          style={{
+            marginTop: 32,
+            padding: 16,
+            border: "1px dashed #ccc",
+            borderRadius: 8,
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontWeight: "bold", marginBottom: 8 }}>
+            🔒 Advanced optimization insights coming soon
+          </p>
+          <p style={{ fontSize: 14, color: "#666" }}>
+            Get deeper portfolio analysis, AI forecasts, and personalized optimization strategies.
+          </p>
+        </div>
+      )}
     </main>
   );
 };
