@@ -15,7 +15,7 @@ export function generatePortfolioSuggestions(assets: Asset[], opts?: { premium?:
   const riskLevel = opts?.riskLevel;
   // 1. Concentration Rule
   if (maxAlloc > 50) {
-    suggestions.push(`Your largest holding (${maxAsset}) makes up ${maxAlloc.toFixed(1)}% of your portfolio. Reducing it can improve balance and reduce risk.`);
+    suggestions.push(`Your largest holding (${maxAsset}) is ${maxAlloc.toFixed(1)}% of your portfolio — reducing it can improve balance and reduce risk.`);
   }
   // 2. Low Diversification Rule
   if (numberOfAssets < 3) {
