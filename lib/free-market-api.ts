@@ -106,6 +106,7 @@ export async function fetchFreeNews(): Promise<{
   try {
     const url =
       "https://news.google.com/rss/search?q=finance+stock+market+economy&hl=en-US&gl=US&ceid=US:en";
+    console.log('[fetchFreeNews] Fetching:', url);
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; SphereVista360/1.0)",
@@ -113,9 +114,13 @@ export async function fetchFreeNews(): Promise<{
       next: { revalidate: 600 },
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[fetchFreeNews] Response not ok:', res.status, res.statusText);
+      return null;
+    }
 
     const xml = await res.text();
+    console.log('[fetchFreeNews] XML length:', xml.length);
 
     // Simple XML parsing with regex — extract <item> blocks
     const items: NewsItem[] = [];
@@ -146,8 +151,12 @@ export async function fetchFreeNews(): Promise<{
       }
     }
 
-    if (items.length === 0) return null;
+    if (items.length === 0) {
+      console.warn('[fetchFreeNews] No news items parsed from RSS.');
+      return null;
+    }
 
+    console.log('[fetchFreeNews] Parsed news items:', items.length);
     return {
       data: items,
       source: "Google News",

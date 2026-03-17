@@ -218,14 +218,18 @@ export async function getCurrencyStrength(): Promise<DataResult<CurrencyStrength
 }
 
 export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
+  console.log('[getLatestNews] Fetching latest news...');
   // 1) Try free Google News RSS (no key needed)
   try {
     const free = await fetchFreeNews();
     if (free && free.data.length > 0) {
+      console.log('[getLatestNews] Using live news from Google News RSS.');
       return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
+    } else {
+      console.warn('[getLatestNews] No live news returned from fetchFreeNews.');
     }
-  } catch {
-    // free RSS failed
+  } catch (err) {
+    console.error('[getLatestNews] Error fetching free news:', err);
   }
 
   // 2) Try NewsAPI (if key configured)

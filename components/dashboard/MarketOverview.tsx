@@ -38,6 +38,7 @@ function getMarketStatus(): { open: boolean; label: string } {
 }
 
 
+export function MarketOverview({ data, isLive = false, source, lastUpdated }: MarketOverviewProps) {
   const marketStatus = getMarketStatus();
   const USE_NEW_UI = true;
   const isLoading = !data || data.length === 0;
