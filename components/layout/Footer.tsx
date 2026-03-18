@@ -73,7 +73,7 @@ export function Footer() {
             reserved. Financial data is for informational purposes only.
           </p>
           <div className="text-center text-sm text-gray-500 mt-2">
-            Questions or feedback? We'd love to hear from you →
+            Questions or feedback? We&apos;d love to hear from you →
             <a href="mailto:contact@spherevista360.com" className="underline ml-1">
               contact@spherevista360.com
             </a>

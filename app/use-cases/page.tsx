@@ -92,7 +92,7 @@ export default function UseCasesPage() {
         </section>
       {/* CONTACT EMAIL */}
       <div className="text-center text-sm text-gray-500 mt-10">
-        Questions or feedback? We'd love to hear from you →
+        Questions or feedback? We&apos;d love to hear from you →
         <a href="mailto:contact@spherevista360.com" className="underline ml-1">
           contact@spherevista360.com
         </a>
