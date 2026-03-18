@@ -35,6 +35,9 @@ const PremiumFakeDoor: React.FC<PremiumFakeDoorProps> = ({ onUnlock }) => {
     >
       {!showInput && !submitted && (
         <>
+          <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+            Basic analysis shown above
+          </div>
           <button
             style={{
               background: '#222',
@@ -49,7 +52,7 @@ const PremiumFakeDoor: React.FC<PremiumFakeDoorProps> = ({ onUnlock }) => {
             }}
             onClick={handleUnlock}
           >
-            🔒 Unlock Advanced Insights ($9)
+            🔒 Get deeper portfolio insights ($9)
           </button>
           <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
             No signup required to try the analyzer
