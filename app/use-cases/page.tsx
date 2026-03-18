@@ -90,7 +90,14 @@ export default function UseCasesPage() {
             <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition">Try Portfolio Analyzer →</a>
           </Link>
         </section>
-      </main>
+      {/* CONTACT EMAIL */}
+      <div className="text-center text-sm text-gray-500 mt-10">
+        Questions or feedback? We'd love to hear from you →
+        <a href="mailto:contact@spherevista360.com" className="underline ml-1">
+          contact@spherevista360.com
+        </a>
+      </div>
+    </main>
     </>
   );
 }
