@@ -111,7 +111,7 @@ export async function fetchFreeNews(): Promise<{
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; SphereVista360/1.0)",
       },
-      next: { revalidate: 300 }, // 5 minutes
+      next: { revalidate: 300 }, // 5 minutes, force revalidate for news freshness
     });
 
     if (!res.ok) {
