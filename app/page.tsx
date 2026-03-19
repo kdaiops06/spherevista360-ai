@@ -13,8 +13,7 @@ import {
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { CurrencyStrengthCard } from "@/components/dashboard/CurrencyStrengthCard";
 import { PredictionsCard } from "@/components/dashboard/PredictionsCard";
-import dynamic from "next/dynamic";
-const NewsRealtimeWrapper = dynamic(() => import("@/components/dashboard/NewsRealtimeWrapper"), { ssr: false });
+import NewsRealtimeSection from "@/components/dashboard/NewsRealtimeSection";
 import { MarketPulse } from "@/components/dashboard/MarketPulse";
 import { ToolsGrid } from "@/components/dashboard/ToolsGrid";
 import GlobalRiskRadar from "@/components/dashboard/GlobalRiskRadar";
@@ -143,11 +142,11 @@ export default async function HomePage() {
           <div className="lg:col-span-2 space-y-6">
             <MarketOverview data={market.data} isLive={market.isLive} source={market.source} lastUpdated={market.lastUpdated} />
             {/* Real-time news section with polling, refresh, and timestamp */}
-            <NewsRealtimeWrapper
+            <NewsRealtimeSection
               initialNews={news && news.data ? news.data : []}
-              initialIsLive={news && news.isLive}
-              initialSource={news && news.source}
-              initialLastUpdated={news && news.lastUpdated}
+              initialIsLive={typeof news?.isLive === "boolean" ? news.isLive : undefined}
+              initialSource={typeof news?.source === "string" ? news.source : undefined}
+              initialLastUpdated={typeof news?.lastUpdated === "string" ? news.lastUpdated : undefined}
             />
           </div>
           <div className="space-y-6">

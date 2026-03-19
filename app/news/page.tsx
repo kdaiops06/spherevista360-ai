@@ -1,14 +1,12 @@
 
-"use client";
-import dynamic from "next/dynamic";
-const NewsRealtimeWrapper = dynamic(() => import("@/components/dashboard/NewsRealtimeWrapper"), { ssr: false });
+import type { Metadata } from "next";
+import NewsRealtimeSection from "@/components/dashboard/NewsRealtimeSection";
 
 export const metadata: Metadata = {
   title: "Financial News & Analysis",
   description:
     "AI-generated financial news, market analysis, and economic insights. Stay informed with daily articles powered by artificial intelligence.",
 };
-
 
 export default function NewsPage() {
   return (
@@ -21,7 +19,7 @@ export default function NewsPage() {
           AI-generated insights covering markets, currencies, and macroeconomics
         </p>
       </div>
-      <NewsRealtimeWrapper />
+      <NewsRealtimeSection />
     </div>
   );
 }
