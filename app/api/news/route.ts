@@ -16,63 +16,23 @@ export async function GET() {
     isLive = newsResult.isLive;
     source = newsResult.source;
     lastUpdated = newsResult.lastUpdated;
-    raw = newsResult.data;
 
-    // STEP 2: HARD VALIDATION
-    if (!raw) {
-      throw new Error("No data returned from news API");
-    }
+    // STEP 1: LOG FULL RESPONSE STRUCTURE
+    console.log("FULL NEWS RESULT:", JSON.stringify(newsResult, null, 2));
 
-    // STEP 3: IMPROVED DEBUG LOGGING
-    console.log("NEWS DEBUG:", {
-      hasData: !!raw,
-      keys: raw ? Object.keys(raw) : null,
-      isArray: Array.isArray(raw),
-      articlesCount: raw?.articles?.length,
-      itemsCount: raw?.items?.length,
-      resultsCount: raw?.results?.length
-    });
+    // STEP 3: FIX RAW ASSIGNMENT (try all common patterns)
+    raw = newsResult.data?.articles || newsResult.data?.items || newsResult.data?.results || newsResult.data || newsResult.articles || [];
 
-    // STEP 1: FIX DATA EXTRACTION (CRITICAL)
-    if (Array.isArray(raw?.articles)) {
-      articles = raw.articles;
-    } else if (Array.isArray(raw?.items)) {
-      articles = raw.items;
-    } else if (Array.isArray(raw?.results)) {
-      articles = raw.results;
+    // STEP 4: TEMPORARY DIRECT TEST
+    if (Array.isArray(raw)) {
+      console.log("RAW IS ARRAY, LENGTH:", raw.length);
     } else {
-      console.warn("Invalid news format:", raw);
+      console.log("RAW TYPE:", typeof raw);
     }
 
-    // STEP 4: SAFE NORMALIZATION
-    const normalized = Array.isArray(articles)
-      ? articles.map((item: any) => ({
-          title: item.title || item.headline || "No title",
-          url: item.url || item.link || "#",
-          source: item.source?.name || item.source || "Unknown",
-          publishedAt:
-            item.publishedAt || item.pubDate || item.date || new Date().toISOString(),
-        }))
-      : [];
-
-    // STEP 5: SORT AFTER NORMALIZATION
-    const sorted = normalized.sort(
-      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    );
-
-    // STEP 6: FIX FALLBACK LOGIC
-    if (!sorted.length) {
-      console.warn("No valid articles after normalization");
-      fallbackUsed = true;
-    }
-
-    // STEP 7: RESPONSE FORMAT
+    // STEP 5: BYPASS NORMALIZATION (TEMP TEST)
     return NextResponse.json({
-      articles: sorted,
-      fallbackUsed,
-      isLive,
-      source,
-      lastUpdated,
+      rawPreview: raw?.slice?.(0, 3) || raw,
     });
   } catch (err) {
     fallbackUsed = true;
