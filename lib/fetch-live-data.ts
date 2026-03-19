@@ -218,33 +218,66 @@ export async function getCurrencyStrength(): Promise<DataResult<CurrencyStrength
 }
 
 export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
-  console.log('[getLatestNews] Fetching latest news...');
-  // 1) Try free Google News RSS (no key needed)
-  try {
-    const free = await fetchFreeNews();
-    if (free && free.data.length > 0) {
-      console.log('[getLatestNews] Using live news from Google News RSS.');
-      return { data: free.data, isLive: true, source: free.source, lastUpdated: free.lastUpdated };
-    } else {
-      console.warn('[getLatestNews] No live news returned from fetchFreeNews.');
-    }
-  } catch (err) {
-    console.error('[getLatestNews] Error fetching free news:', err);
-  }
+  console.log('[getLatestNews] Fetching latest news from all sources...');
+  const newsPromises: Promise<NewsItem[]>[] = [];
+  const sources: string[] = [];
+  let lastUpdated: string = new Date().toISOString();
 
-  // 2) Try NewsAPI (if key configured)
-  if (process.env.NEWS_API_KEY) {
-    try {
-      const articles = await fetchFinanceNews("finance economy markets stocks");
-      if (articles.length > 0) {
-        return { data: articles.slice(0, 10), isLive: true, source: "NewsAPI", lastUpdated: new Date().toISOString() };
+  // Google News RSS
+  const freeNewsPromise = fetchFreeNews()
+    .then((free) => {
+      if (free && free.data.length > 0) {
+        sources.push(free.source);
+        lastUpdated = free.lastUpdated;
+        return free.data;
       }
-    } catch {
-      // paid also failed
-    }
+      return [];
+    })
+    .catch((err) => {
+      console.error('[getLatestNews] Error fetching free news:', err);
+      return [];
+    });
+  newsPromises.push(freeNewsPromise);
+
+  // NewsAPI
+  if (process.env.NEWS_API_KEY) {
+    const newsApiPromise = fetchFinanceNews("finance economy markets stocks")
+      .then((articles) => {
+        if (articles.length > 0) {
+          sources.push("NewsAPI");
+          return articles;
+        }
+        return [];
+      })
+      .catch((err) => {
+        console.error('[getLatestNews] Error fetching NewsAPI:', err);
+        return [];
+      });
+    newsPromises.push(newsApiPromise);
   }
 
-  // 3) Fallback
+
+  // Await all sources
+  const allNewsArrays = await Promise.all(newsPromises);
+  // Flatten, dedupe by url, and sort by publishedAt desc
+  const allNews: NewsItem[] = allNewsArrays.flat();
+  const seen = new Set<string>();
+  const deduped = allNews.filter((item) => {
+    if (!item.url || seen.has(item.url)) return false;
+    seen.add(item.url);
+    return true;
+  });
+  const sorted = deduped.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  if (sorted.length > 0) {
+    return {
+      data: sorted,
+      isLive: true,
+      source: sources.join(", ") || "Multiple",
+      lastUpdated,
+    };
+  }
+  // Fallback
   return { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
 }
 
