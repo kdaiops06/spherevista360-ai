@@ -4,7 +4,6 @@ import { getLatestNews } from "@/lib/fetch-live-data";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  let debugInfo = {};
   let fallbackUsed = false;
   let articles: any[] = [];
   let raw: any = null;
@@ -18,13 +17,34 @@ export async function GET() {
     source = newsResult.source;
     lastUpdated = newsResult.lastUpdated;
     raw = newsResult.data;
-    // STEP 1: LOG RAW API RESPONSE
-    console.log("NEWS RAW RESPONSE:", raw);
 
-    // STEP 2: IDENTIFY CORRECT DATA PATH
-    articles = raw.articles || raw.items || raw.results || raw || [];
+    // STEP 2: HARD VALIDATION
+    if (!raw) {
+      throw new Error("No data returned from news API");
+    }
 
-    // STEP 3: MAP DATA SAFELY
+    // STEP 3: IMPROVED DEBUG LOGGING
+    console.log("NEWS DEBUG:", {
+      hasData: !!raw,
+      keys: raw ? Object.keys(raw) : null,
+      isArray: Array.isArray(raw),
+      articlesCount: raw?.articles?.length,
+      itemsCount: raw?.items?.length,
+      resultsCount: raw?.results?.length
+    });
+
+    // STEP 1: FIX DATA EXTRACTION (CRITICAL)
+    if (Array.isArray(raw?.articles)) {
+      articles = raw.articles;
+    } else if (Array.isArray(raw?.items)) {
+      articles = raw.items;
+    } else if (Array.isArray(raw?.results)) {
+      articles = raw.results;
+    } else {
+      console.warn("Invalid news format:", raw);
+    }
+
+    // STEP 4: SAFE NORMALIZATION
     const normalized = Array.isArray(articles)
       ? articles.map((item: any) => ({
           title: item.title || item.headline || "No title",
@@ -35,34 +55,24 @@ export async function GET() {
         }))
       : [];
 
-    // STEP 4: FIX FILTER BUG (no strict filter)
-    // STEP 5: FIX SORTING (AFTER NORMALIZATION)
+    // STEP 5: SORT AFTER NORMALIZATION
     const sorted = normalized.sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
 
     // STEP 6: FIX FALLBACK LOGIC
-    if (!sorted.length || sorted.every((a) => a.title === "No title")) {
+    if (!sorted.length) {
+      console.warn("No valid articles after normalization");
       fallbackUsed = true;
-      console.warn("Using fallback news data");
     }
 
-    debugInfo = {
-      rawType: typeof raw,
-      rawKeys: raw && typeof raw === "object" ? Object.keys(raw) : null,
-      count: sorted.length,
-      fallbackUsed,
-      isLive,
-      source,
-    };
-
+    // STEP 7: RESPONSE FORMAT
     return NextResponse.json({
       articles: sorted,
       fallbackUsed,
       isLive,
       source,
       lastUpdated,
-      debugInfo,
     });
   } catch (err) {
     fallbackUsed = true;
@@ -73,7 +83,6 @@ export async function GET() {
       isLive: false,
       source: "Error",
       lastUpdated: null,
-      debugInfo: { error: String(err) },
     });
   }
 }
