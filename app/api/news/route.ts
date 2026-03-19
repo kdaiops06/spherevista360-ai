@@ -16,37 +16,40 @@ export async function GET() {
     isLive = newsResult.isLive;
     source = newsResult.source;
     lastUpdated = newsResult.lastUpdated;
-    raw = newsResult.data;
 
-    // STEP 2: HARD VALIDATION
-    if (!raw) {
-      throw new Error("No data returned from news API");
-    }
+    // STEP 1: LOG FULL RESPONSE STRUCTURE
+    console.log("FULL NEWS RESULT:", JSON.stringify(newsResult, null, 2));
 
-    // STEP 3: IMPROVED DEBUG LOGGING
-    console.log("NEWS DEBUG:", {
-      hasData: !!raw,
-      keys: raw ? Object.keys(raw) : null,
-      isArray: Array.isArray(raw),
-      articlesCount: raw?.articles?.length,
-      itemsCount: raw?.items?.length,
-      resultsCount: raw?.results?.length
-    });
 
-    // STEP 1: FIX DATA EXTRACTION (CRITICAL)
-    if (Array.isArray(raw?.articles)) {
-      articles = raw.articles;
-    } else if (Array.isArray(raw?.items)) {
-      articles = raw.items;
-    } else if (Array.isArray(raw?.results)) {
-      articles = raw.results;
+    // STEP 3: FIX RAW ASSIGNMENT (try all common patterns, but only if data is object)
+    if (newsResult.data && typeof newsResult.data === 'object' && !Array.isArray(newsResult.data)) {
+      const dataObj = newsResult.data as Record<string, unknown>;
+      if (Array.isArray((dataObj as any).articles)) {
+        raw = (dataObj as any).articles;
+      } else if (Array.isArray((dataObj as any).items)) {
+        raw = (dataObj as any).items;
+      } else if (Array.isArray((dataObj as any).results)) {
+        raw = (dataObj as any).results;
+      } else {
+        raw = newsResult.data;
+      }
+    } else if (Array.isArray(newsResult.data)) {
+      raw = newsResult.data;
+    } else if (Array.isArray((newsResult as any).articles)) {
+      raw = (newsResult as any).articles;
     } else {
-      console.warn("Invalid news format:", raw);
+      raw = [];
     }
 
     // STEP 4: SAFE NORMALIZATION
-    const normalized = Array.isArray(articles)
-      ? articles.map((item: any) => ({
+    if (Array.isArray(raw)) {
+      console.log("RAW IS ARRAY, LENGTH:", raw.length);
+    } else {
+      console.log("RAW TYPE:", typeof raw);
+    }
+
+    const normalized = Array.isArray(raw)
+      ? raw.map((item: any) => ({
           title: item.title || item.headline || "No title",
           url: item.url || item.link || "#",
           source: item.source?.name || item.source || "Unknown",
