@@ -17,7 +17,11 @@ export async function GET() {
     source = newsResult.source;
     lastUpdated = newsResult.lastUpdated;
 
-    // Extract articles array from possible locations
+    // STEP 1: LOG FULL RESPONSE STRUCTURE
+    console.log("FULL NEWS RESULT:", JSON.stringify(newsResult, null, 2));
+
+
+    // STEP 3: FIX RAW ASSIGNMENT (try all common patterns, but only if data is object)
     if (newsResult.data && typeof newsResult.data === 'object' && !Array.isArray(newsResult.data)) {
       const dataObj = newsResult.data as Record<string, unknown>;
       if (Array.isArray((dataObj as any).articles)) {
@@ -37,7 +41,13 @@ export async function GET() {
       raw = [];
     }
 
-    // Normalize
+    // STEP 4: SAFE NORMALIZATION
+    if (Array.isArray(raw)) {
+      console.log("RAW IS ARRAY, LENGTH:", raw.length);
+    } else {
+      console.log("RAW TYPE:", typeof raw);
+    }
+
     const normalized = Array.isArray(raw)
       ? raw.map((item: any) => ({
           title: item.title || item.headline || "No title",
@@ -48,16 +58,18 @@ export async function GET() {
         }))
       : [];
 
-    // Sort
+    // STEP 5: SORT AFTER NORMALIZATION
     const sorted = normalized.sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
 
-    // Fallback logic
+    // STEP 6: FIX FALLBACK LOGIC
     if (!sorted.length) {
+      console.warn("No valid articles after normalization");
       fallbackUsed = true;
     }
 
+    // STEP 7: RESPONSE FORMAT
     return NextResponse.json({
       articles: sorted,
       fallbackUsed,
@@ -67,6 +79,7 @@ export async function GET() {
     });
   } catch (err) {
     fallbackUsed = true;
+    console.error("NEWS API ERROR:", err);
     return NextResponse.json({
       articles: [],
       fallbackUsed: true,
