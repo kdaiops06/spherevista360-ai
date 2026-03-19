@@ -13,7 +13,7 @@ import {
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { CurrencyStrengthCard } from "@/components/dashboard/CurrencyStrengthCard";
 import { PredictionsCard } from "@/components/dashboard/PredictionsCard";
-import { LatestNewsCard } from "@/components/dashboard/LatestNewsCard";
+import NewsRealtimeSection from "@/components/dashboard/NewsRealtimeSection";
 import { MarketPulse } from "@/components/dashboard/MarketPulse";
 import { ToolsGrid } from "@/components/dashboard/ToolsGrid";
 import GlobalRiskRadar from "@/components/dashboard/GlobalRiskRadar";
@@ -141,14 +141,13 @@ export default async function HomePage() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
             <MarketOverview data={market.data} isLive={market.isLive} source={market.source} lastUpdated={market.lastUpdated} />
-            {/* Trust indicator for news freshness */}
-            <div className="mb-2 text-xs text-gray-500">Updated every few minutes</div>
-            {/* News fallback if fetch fails */}
-            {news && news.data && news.data.length > 0 ? (
-              <LatestNewsCard news={news.data} isLive={news.isLive} source={news.source} lastUpdated={news.lastUpdated} />
-            ) : (
-              <div className="card p-4 text-center text-sm text-gray-500 border border-gray-200">Unable to fetch latest news</div>
-            )}
+            {/* Real-time news section with polling, refresh, and timestamp */}
+            <NewsRealtimeSection
+              initialNews={news && news.data ? news.data : []}
+              initialIsLive={typeof news?.isLive === "boolean" ? news.isLive : undefined}
+              initialSource={typeof news?.source === "string" ? news.source : undefined}
+              initialLastUpdated={typeof news?.lastUpdated === "string" ? news.lastUpdated : undefined}
+            />
           </div>
           <div className="space-y-6">
             <CurrencyStrengthCard data={currency.data} isLive={currency.isLive} source={currency.source} lastUpdated={currency.lastUpdated} />
