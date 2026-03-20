@@ -223,7 +223,7 @@ export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
   const sources: string[] = [];
   let lastUpdated: string = new Date().toISOString();
 
-  // Google News RSS
+  // Google News RSS (broadened query)
   const freeNewsPromise = fetchFreeNews()
     .then((free) => {
       if (free && free.data.length > 0) {
@@ -239,9 +239,9 @@ export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
     });
   newsPromises.push(freeNewsPromise);
 
-  // NewsAPI
+  // NewsAPI (broadened query)
   if (process.env.NEWS_API_KEY) {
-    const newsApiPromise = fetchFinanceNews("finance economy markets stocks")
+    const newsApiPromise = fetchFinanceNews("finance economy markets stocks investing investment business today")
       .then((articles) => {
         if (articles.length > 0) {
           sources.push("NewsAPI");
@@ -256,15 +256,15 @@ export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
     newsPromises.push(newsApiPromise);
   }
 
-
   // Await all sources
   const allNewsArrays = await Promise.all(newsPromises);
-  // Flatten, dedupe by url, and sort by publishedAt desc
-  const allNews: NewsItem[] = allNewsArrays.flat();
-  const seen = new Set<string>();
+  // Flatten, dedupe by title+url, and sort by publishedAt desc
+  const allNews = allNewsArrays.flat();
+  const seen = new Set();
   const deduped = allNews.filter((item) => {
-    if (!item.url || seen.has(item.url)) return false;
-    seen.add(item.url);
+    const key = item.title + item.url;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
   const sorted = deduped.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
@@ -273,10 +273,11 @@ export async function getLatestNews(): Promise<DataResult<NewsItem[]>> {
     return {
       data: sorted,
       isLive: true,
-      source: sources.join(", ") || "Multiple",
+      source: sources.join(", "),
       lastUpdated,
     };
   }
+
   // Fallback
   return { data: DEMO_NEWS, isLive: false, source: "Sample headlines", lastUpdated: ILLUSTRATIVE_DATE };
 }
