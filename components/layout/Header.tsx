@@ -19,6 +19,7 @@ const navigation = [
   { name: "Use Cases", href: "/use-cases", icon: Wrench },
   { name: "Premium", href: "/premium", icon: Brain },
   { name: "Dashboard", href: "/dashboard", icon: TrendingUp },
+  { name: "Watchlist AI", href: "/dashboard/watchlist-ai", icon: Brain },
 ];
 
 export function Header() {

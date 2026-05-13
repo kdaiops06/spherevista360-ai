@@ -294,6 +294,43 @@ Available as a full page (`/global-risk-radar`) or compact homepage widget (`<Gl
 
 ---
 
+## Watchlist AI Service Layer
+
+The repository now includes a reusable stock intelligence service module for the premium watchlist experience.
+
+### Endpoints
+
+- `GET /api/watchlist-ai`
+     - Query params:
+          - `symbols=AAPL,MSFT,NVDA` (optional)
+          - `timeframe=1D|1W|1M|3M|1Y` (optional, default `1D`)
+          - `force=1` to bypass cache (optional)
+- `GET /api/watchlist-ai/stream`
+     - Server-Sent Events stream for realtime snapshots (poll-backed on server)
+
+### Provider fallback order
+
+1. Finnhub
+2. TwelveData
+3. Polygon
+4. Alpha Vantage
+5. Deterministic fallback feed
+
+### Resilience behavior
+
+- In-memory TTL cache for snapshot responses
+- Retry with timeout for upstream provider calls
+- Request budget guard per provider (rate-limit safety)
+- Graceful fallback mode with clear `fallbackUsed` and `fallbackReason`
+- Alert generation for drop threshold, volatility spikes, and volume anomalies
+
+### Charting
+
+- Watchlist premium module uses TradingView `lightweight-charts` for the composite institutional trend panel.
+- Recharts remains in use for supporting visualizations and existing dashboard components.
+
+---
+
 ## Testing
 
 36 E2E tests covering all routes, tools, APIs, and programmatic pages:
