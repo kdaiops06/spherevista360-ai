@@ -23,7 +23,6 @@ import {
   TrendingUp,
   Waves,
 } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { cn, formatCurrency, formatNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +41,7 @@ import type {
   WatchlistTimeframe,
 } from "@/lib/watchlist-ai/types";
 import { InstitutionalTrendChart } from "@/components/watchlist-ai/InstitutionalTrendChart";
+import { MiniLightweightChart } from "@/components/watchlist-ai/MiniLightweightChart";
 
 interface WatchlistDashboardClientProps {
   initialSnapshot: WatchlistSnapshot;
@@ -78,7 +78,25 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function applyFilters(items: WatchlistStockItem[], filters: WatchlistFilter[], alertTickers: Set<string>) {
+interface ThresholdFilters {
+  minGain: number;
+  maxLoss: number;
+  minRsi: number;
+  minVolatility: number;
+  maxPeRatio: number;
+  maxDebtToEquity: number;
+}
+
+const defaultThresholds: ThresholdFilters = {
+  minGain: -100,
+  maxLoss: -100,
+  minRsi: 0,
+  minVolatility: 0,
+  maxPeRatio: 10_000,
+  maxDebtToEquity: 10_000,
+};
+
+function applyFilters(items: WatchlistStockItem[], filters: WatchlistFilter[], alertTickers: Set<string>, thresholds: ThresholdFilters) {
   return items.filter((item) => {
     for (const filter of filters) {
       if (
@@ -110,6 +128,29 @@ function applyFilters(items: WatchlistStockItem[], filters: WatchlistFilter[], a
       }
     }
 
+    if (item.changePercent < thresholds.minGain) {
+      return false;
+    }
+    if (thresholds.maxLoss > -100 && item.changePercent > -Math.abs(thresholds.maxLoss)) {
+      return false;
+    }
+    if (item.rsiScore < thresholds.minRsi) {
+      return false;
+    }
+    if (item.volatilityScore < thresholds.minVolatility) {
+      return false;
+    }
+    if (thresholds.maxPeRatio < 10_000 && item.fundamentals.peRatio != null && item.fundamentals.peRatio > thresholds.maxPeRatio) {
+      return false;
+    }
+    if (
+      thresholds.maxDebtToEquity < 10_000 &&
+      item.fundamentals.debtToEquity != null &&
+      item.fundamentals.debtToEquity > thresholds.maxDebtToEquity
+    ) {
+      return false;
+    }
+
     return true;
   });
 }
@@ -139,24 +180,6 @@ function applySort(items: WatchlistStockItem[], sortBy: string, watchlistSymbols
   }
 }
 
-function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
-  const points = data.map((value, index) => ({ value, index }));
-  return (
-    <ResponsiveContainer width="100%" height={56}>
-      <LineChart data={points}>
-        <Line
-          type="monotone"
-          dataKey="value"
-          stroke={positive ? "#22c55e" : "#fb7185"}
-          strokeWidth={2.2}
-          dot={false}
-          isAnimationActive
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-}
-
 function TimeframeRibbon({ item }: { item: WatchlistStockItem }) {
   return (
     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -173,7 +196,7 @@ function TimeframeRibbon({ item }: { item: WatchlistStockItem }) {
               </span>
             </div>
             <div className="h-8">
-              <Sparkline data={insight.series} positive={positive} />
+              <MiniLightweightChart data={insight.series} positive={positive} height={32} />
             </div>
           </div>
         );
@@ -256,7 +279,7 @@ function WatchlistCard({
         </div>
 
         <div className="mt-3">
-          <Sparkline data={item.miniSeries} positive={isPositive} />
+          <MiniLightweightChart data={item.miniSeries} positive={isPositive} height={56} />
         </div>
 
         <TimeframeRibbon item={item} />
@@ -277,6 +300,25 @@ function WatchlistCard({
           <div className="rounded-lg bg-white/5 p-2">
             <span className="text-slate-400">Momentum</span>
             <p className="mt-1 font-medium text-white">{item.momentumScore}/100</p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-white/5 p-2">
+            <span className="text-slate-400">P/E</span>
+            <p className="mt-1 font-medium text-white">{item.fundamentals.peRatio != null ? item.fundamentals.peRatio.toFixed(2) : "N/A"}</p>
+          </div>
+          <div className="rounded-lg bg-white/5 p-2">
+            <span className="text-slate-400">Debt/Equity</span>
+            <p className="mt-1 font-medium text-white">{item.fundamentals.debtToEquity != null ? item.fundamentals.debtToEquity.toFixed(2) : "N/A"}</p>
+          </div>
+          <div className="rounded-lg bg-white/5 p-2">
+            <span className="text-slate-400">ROE</span>
+            <p className="mt-1 font-medium text-white">{item.fundamentals.roe != null ? `${item.fundamentals.roe.toFixed(1)}%` : "N/A"}</p>
+          </div>
+          <div className="rounded-lg bg-white/5 p-2">
+            <span className="text-slate-400">MACD</span>
+            <p className="mt-1 font-medium text-white uppercase">{item.technicalSignals.macdTrend}</p>
           </div>
         </div>
 
@@ -315,7 +357,7 @@ function WatchlistCard({
         </div>
 
         <p className="mt-3 rounded-lg border border-cyan-400/15 bg-cyan-500/5 p-2 text-xs text-cyan-100/90">
-          {item.aiAnalysis} AI confidence: {item.aiConfidence}%.
+          {item.aiAnalysis} Confidence: {item.aiConfidence}%. Bullish continuation probability: {item.trendContinuationProbability}%.
         </p>
       </div>
     </motion.article>
@@ -378,14 +420,16 @@ export function WatchlistDashboardClient({
   const [error, setError] = useState<string | null>(null);
   const [newTicker, setNewTicker] = useState("");
   const [draggedTicker, setDraggedTicker] = useState<string | null>(null);
+  const [thresholds, setThresholds] = useState<ThresholdFilters>(defaultThresholds);
+  const [screenerWindow, setScreenerWindow] = useState<CardTimeframe>(initialSnapshot.screenerTimeframe);
   const symbolsKey = watchlistSymbols.join(",");
 
   const alertTickers = useMemo(() => new Set(snapshot.alerts.map((alert) => alert.ticker)), [snapshot.alerts]);
 
   const visibleItems = useMemo(() => {
-    const filtered = applyFilters(snapshot.items, filters, alertTickers);
+    const filtered = applyFilters(snapshot.items, filters, alertTickers, thresholds);
     return applySort(filtered, sortBy, watchlistSymbols);
-  }, [snapshot.items, filters, alertTickers, sortBy, watchlistSymbols]);
+  }, [snapshot.items, filters, alertTickers, thresholds, sortBy, watchlistSymbols]);
 
   const breadth = useMemo(() => {
     const positive = snapshot.items.filter((item) => item.changePercent >= 0).length;
@@ -434,6 +478,14 @@ export function WatchlistDashboardClient({
     () => [...visibleItems].sort((a, b) => b.volatilityScore - a.volatilityScore).slice(0, 4),
     [visibleItems]
   );
+
+  const screened = useMemo(() => {
+    const score = (item: WatchlistStockItem) => item.timeframeInsights[screenerWindow]?.changePercent ?? item.changePercent;
+    return {
+      gainers: [...visibleItems].filter((i) => score(i) >= 10).sort((a, b) => score(b) - score(a)).slice(0, 6),
+      losers: [...visibleItems].filter((i) => score(i) <= -10).sort((a, b) => score(a) - score(b)).slice(0, 6),
+    };
+  }, [visibleItems, screenerWindow]);
 
   const fetchSnapshot = useCallback(
     async (forceRefresh = false) => {
@@ -677,6 +729,65 @@ export function WatchlistDashboardClient({
               </select>
             </div>
           </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <label className="text-xs text-slate-300">
+              Gain &gt; %
+              <input
+                type="number"
+                value={thresholds.minGain}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, minGain: Number(e.target.value || 0) }))}
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <label className="text-xs text-slate-300">
+              Loss &gt; %
+              <input
+                type="number"
+                value={Math.abs(thresholds.maxLoss)}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, maxLoss: -Math.abs(Number(e.target.value || 0)) }))}
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <label className="text-xs text-slate-300">
+              RSI &gt;
+              <input
+                type="number"
+                value={thresholds.minRsi}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, minRsi: Number(e.target.value || 0) }))}
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <label className="text-xs text-slate-300">
+              Volatility &gt;
+              <input
+                type="number"
+                value={thresholds.minVolatility}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, minVolatility: Number(e.target.value || 0) }))}
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <label className="text-xs text-slate-300">
+              P/E &lt;
+              <input
+                type="number"
+                value={thresholds.maxPeRatio >= 10000 ? "" : thresholds.maxPeRatio}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, maxPeRatio: e.target.value ? Number(e.target.value) : 10000 }))}
+                placeholder="Any"
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <label className="text-xs text-slate-300">
+              Debt/Equity &lt;
+              <input
+                type="number"
+                value={thresholds.maxDebtToEquity >= 10000 ? "" : thresholds.maxDebtToEquity}
+                onChange={(e) => setThresholds((prev) => ({ ...prev, maxDebtToEquity: e.target.value ? Number(e.target.value) : 10000 }))}
+                placeholder="Any"
+                className="mt-1 w-full rounded-lg border border-white/15 bg-[#0b1730] px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+          </div>
         </section>
 
         <section className="mt-8">
@@ -779,6 +890,120 @@ export function WatchlistDashboardClient({
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <TrendingUp className="h-5 w-5 text-cyan-300" />
+              Advanced Stock Screeners
+            </h3>
+            <div className="flex gap-2">
+              {(["1D", "1W", "1M", "3M"] as CardTimeframe[]).map((tf) => (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setScreenerWindow(tf)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs",
+                    screenerWindow === tf ? "border-cyan-300 bg-cyan-500/20 text-cyan-100" : "border-white/15 text-slate-300"
+                  )}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-4">
+              <p className="text-sm font-semibold text-emerald-200">Biggest Gainers (&gt;10%)</p>
+              <div className="mt-2 space-y-2 text-sm">
+                {screened.gainers.length ? screened.gainers.map((stock) => (
+                  <div key={stock.ticker} className="flex items-center justify-between">
+                    <span>{stock.ticker}</span>
+                    <span className="text-emerald-200">+{stock.timeframeInsights[screenerWindow].changePercent.toFixed(2)}%</span>
+                  </div>
+                )) : <p className="text-slate-300">No gainers above threshold.</p>}
+              </div>
+            </div>
+            <div className="rounded-xl border border-rose-300/30 bg-rose-500/10 p-4">
+              <p className="text-sm font-semibold text-rose-200">Biggest Losers (&gt;10% down)</p>
+              <div className="mt-2 space-y-2 text-sm">
+                {screened.losers.length ? screened.losers.map((stock) => (
+                  <div key={stock.ticker} className="flex items-center justify-between">
+                    <span>{stock.ticker}</span>
+                    <span className="text-rose-200">{stock.timeframeInsights[screenerWindow].changePercent.toFixed(2)}%</span>
+                  </div>
+                )) : <p className="text-slate-300">No losers above threshold.</p>}
+              </div>
+            </div>
+            <div className="rounded-xl border border-cyan-300/30 bg-cyan-500/10 p-4">
+              <p className="text-sm font-semibold text-cyan-100">AI Bearish Warnings</p>
+              <div className="mt-2 space-y-2 text-sm">
+                {(snapshot.screeners.aiBearishWarnings.length ? snapshot.screeners.aiBearishWarnings : topLosers).slice(0, 6).map((stock) => (
+                  <div key={stock.ticker} className="flex items-center justify-between">
+                    <span>{stock.ticker}</span>
+                    <span className="text-cyan-200">{stock.bearishProbability}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {snapshot.smartPanels.slice(0, 6).map((panel) => (
+              <div key={panel.title} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm font-semibold text-white">{panel.title}</p>
+                <p className="mt-1 text-xs text-slate-300">{panel.description}</p>
+                <div className="mt-2 space-y-1 text-sm">
+                  {panel.items.slice(0, 4).map((item) => (
+                    <div key={item.ticker} className="flex items-center justify-between text-slate-200">
+                      <span>{item.ticker}</span>
+                      <span>{item.momentumScore}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-10 rounded-2xl border border-white/10 bg-white/5 p-5">
+          <h3 className="mb-4 text-lg font-semibold text-white">Side-by-Side Fundamental + Momentum Comparison</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-xs text-slate-200">
+              <thead>
+                <tr className="border-b border-white/10 text-slate-300">
+                  <th className="px-2 py-2">Ticker</th>
+                  <th className="px-2 py-2">1W %</th>
+                  <th className="px-2 py-2">Momentum</th>
+                  <th className="px-2 py-2">Volatility</th>
+                  <th className="px-2 py-2">P/E</th>
+                  <th className="px-2 py-2">Debt/Equity</th>
+                  <th className="px-2 py-2">RSI</th>
+                  <th className="px-2 py-2">AI Sentiment</th>
+                  <th className="px-2 py-2">Bullish %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleItems.slice(0, 12).map((item) => (
+                  <tr key={item.ticker} className="border-b border-white/5">
+                    <td className="px-2 py-2 font-semibold text-white">{item.ticker}</td>
+                    <td className={cn("px-2 py-2", item.timeframeInsights["1W"].changePercent >= 0 ? "text-emerald-300" : "text-rose-300")}>
+                      {item.timeframeInsights["1W"].changePercent.toFixed(2)}%
+                    </td>
+                    <td className="px-2 py-2">{item.momentumScore}</td>
+                    <td className="px-2 py-2">{item.volatilityScore}</td>
+                    <td className="px-2 py-2">{item.fundamentals.peRatio != null ? item.fundamentals.peRatio.toFixed(1) : "N/A"}</td>
+                    <td className="px-2 py-2">{item.fundamentals.debtToEquity != null ? item.fundamentals.debtToEquity.toFixed(2) : "N/A"}</td>
+                    <td className="px-2 py-2">{item.rsiScore}</td>
+                    <td className="px-2 py-2 uppercase">{item.sentiment}</td>
+                    <td className="px-2 py-2">{item.bullishProbability}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 

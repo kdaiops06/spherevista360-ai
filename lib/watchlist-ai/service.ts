@@ -2,7 +2,11 @@ import { WATCHLIST_PROVIDER_ORDER } from "@/lib/watchlist-ai/providers";
 import type {
   CardTimeframe,
   RawProviderQuote,
+  StockFundamentals,
+  TechnicalSignals,
+  TimeframeInsight,
   WatchlistAlert,
+  WatchlistScreenerPanel,
   WatchlistSnapshot,
   WatchlistStockItem,
   WatchlistTimeframe,
@@ -19,10 +23,7 @@ const ALERT_VOLUME_SPIKE_RATIO = Number(process.env.WATCHLIST_AI_ALERT_VOLUME_SP
 const watchlistCache = new Map<string, { expiresAt: number; value: WatchlistSnapshot }>();
 const previousVolume = new Map<string, number>();
 
-const stockMetadata: Record<
-  string,
-  { name: string; sector: string; assetType: "stock" | "etf" | "crypto"; marketCap?: number }
-> = {
+const stockMetadata: Record<string, { name: string; sector: string; assetType: "stock" | "etf" | "crypto"; marketCap?: number }> = {
   AAPL: { name: "Apple Inc.", sector: "Technology", assetType: "stock", marketCap: 2_900_000_000_000 },
   MSFT: { name: "Microsoft Corp.", sector: "Technology", assetType: "stock", marketCap: 3_100_000_000_000 },
   NVDA: { name: "NVIDIA Corp.", sector: "Semiconductors", assetType: "stock", marketCap: 2_300_000_000_000 },
@@ -35,6 +36,7 @@ const stockMetadata: Record<
   NFLX: { name: "Netflix Inc.", sector: "Communication Services", assetType: "stock", marketCap: 290_000_000_000 },
   AMD: { name: "Advanced Micro Devices", sector: "Semiconductors", assetType: "stock", marketCap: 280_000_000_000 },
   BTCUSD: { name: "Bitcoin", sector: "Crypto", assetType: "crypto" },
+  ETHUSD: { name: "Ethereum", sector: "Crypto", assetType: "crypto" },
 };
 
 const fallbackBasePrice: Record<string, number> = {
@@ -62,10 +64,7 @@ function normalizeSymbols(symbols?: string[]): string[] {
   const normalized = (symbols || DEFAULT_SYMBOLS)
     .map((symbol) => symbol.trim().toUpperCase())
     .filter(Boolean);
-  if (normalized.length === 0) {
-    return DEFAULT_SYMBOLS;
-  }
-  return Array.from(new Set(normalized));
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : DEFAULT_SYMBOLS;
 }
 
 function buildCacheKey(symbols: string[], timeframe: WatchlistTimeframe): string {
@@ -79,37 +78,41 @@ function inferTrend(series: number[]): "up" | "down" | "flat" {
   const first = series[0];
   const last = series[series.length - 1];
   const delta = last - first;
-  if (Math.abs(delta) < first * 0.002) {
+  if (Math.abs(delta) < Math.max(0.01, first * 0.002)) {
     return "flat";
   }
   return delta > 0 ? "up" : "down";
 }
 
-function createDeterministicSeries(price: number, changePercent: number): number[] {
-  const points = 22;
-  const base = price / (1 + changePercent / 100 || 1);
-  const series: number[] = [];
-
-  for (let index = 0; index < points; index += 1) {
-    const t = index / (points - 1);
+function createFallbackSeries(price: number, points: number, waveFactor: number): number[] {
+  const base = Math.max(1, price * 0.985);
+  return Array.from({ length: points }).map((_, index) => {
+    const t = index / Math.max(1, points - 1);
     const drift = base + (price - base) * t;
-    const wave = Math.sin(index * 0.9) * price * 0.0022;
-    series.push(Number((drift + wave).toFixed(2)));
+    const wave = Math.sin(index * 0.8) * price * waveFactor;
+    return Number((drift + wave).toFixed(2));
+  });
+}
+
+function computeVolatilityScore(series: number[]): number {
+  if (series.length < 2) {
+    return 20;
   }
-
-  return series;
+  const high = Math.max(...series);
+  const low = Math.min(...series);
+  if (low <= 0) {
+    return 20;
+  }
+  const volatilityPct = ((high - low) / low) * 100;
+  return clamp(Math.round(volatilityPct * 4.5), 5, 100);
 }
 
-function computeVolatilityScore(quote: RawProviderQuote): number {
-  const range = quote.dayHigh > quote.dayLow ? (quote.dayHigh - quote.dayLow) / quote.dayLow : 0;
-  const changeComponent = Math.abs(quote.changePercent) * 10;
-  const rangeComponent = range * 480;
-  return clamp(Math.round(changeComponent + rangeComponent), 5, 100);
-}
-
-function computeMomentumScore(quote: RawProviderQuote, series: number[]): number {
-  const slope = series.length > 1 ? (series[series.length - 1] - series[0]) / series[0] : 0;
-  const score = 50 + quote.changePercent * 4 + slope * 180;
+function computeMomentumScore(changePercent: number, series: number[]): number {
+  if (series.length < 2) {
+    return clamp(Math.round(50 + changePercent * 2.5), 0, 100);
+  }
+  const slope = (series[series.length - 1] - series[0]) / Math.max(series[0], 0.01);
+  const score = 50 + changePercent * 3.5 + slope * 165;
   return clamp(Math.round(score), 0, 100);
 }
 
@@ -120,11 +123,11 @@ function computeRsi(series: number[], period = 14): number {
 
   let gains = 0;
   let losses = 0;
-  for (let index = series.length - period; index < series.length; index += 1) {
-    const prev = series[index - 1];
-    const next = series[index];
+  for (let i = series.length - period; i < series.length; i += 1) {
+    const prev = series[i - 1];
+    const next = series[i];
     const delta = next - prev;
-    if (delta > 0) {
+    if (delta >= 0) {
       gains += delta;
     } else {
       losses += Math.abs(delta);
@@ -134,94 +137,96 @@ function computeRsi(series: number[], period = 14): number {
   const avgGain = gains / period;
   const avgLoss = losses / period;
   if (avgLoss === 0) {
-    return 70;
+    return 72;
   }
 
   const rs = avgGain / avgLoss;
   return clamp(Math.round(100 - 100 / (1 + rs)), 10, 90);
 }
 
-function reshapeSeries(baseSeries: number[], points: number, amplitudeFactor: number): number[] {
-  if (baseSeries.length === 0) {
-    return [];
+function sma(series: number[], period: number): number | null {
+  if (series.length < period) {
+    return null;
   }
-
-  const first = baseSeries[0];
-  const last = baseSeries[baseSeries.length - 1];
-  const trend = last - first;
-  const synthetic: number[] = [];
-
-  for (let index = 0; index < points; index += 1) {
-    const t = index / Math.max(points - 1, 1);
-    const drift = first + trend * t;
-    const wave = Math.sin(index * 0.75) * first * amplitudeFactor;
-    synthetic.push(Number((drift + wave).toFixed(2)));
-  }
-
-  return synthetic;
+  const slice = series.slice(series.length - period);
+  return Number((slice.reduce((sum, n) => sum + n, 0) / period).toFixed(2));
 }
 
-function buildTimeframeInsights(baseSeries: number[]) {
-  const map = new Map<CardTimeframe, { points: number; amp: number }>([
-    ["1D", { points: 22, amp: 0.0025 }],
-    ["1W", { points: 18, amp: 0.0045 }],
-    ["1M", { points: 20, amp: 0.0065 }],
-    ["3M", { points: 24, amp: 0.009 }],
-  ]);
+function ema(series: number[], period: number): number | null {
+  if (series.length < period) {
+    return null;
+  }
+  const k = 2 / (period + 1);
+  let value = series[0];
+  for (let i = 1; i < series.length; i += 1) {
+    value = series[i] * k + value * (1 - k);
+  }
+  return Number(value.toFixed(2));
+}
 
-  const insights = {} as Record<
-    CardTimeframe,
-    {
-      timeframe: CardTimeframe;
-      changePercent: number;
-      trendDirection: "up" | "down" | "flat";
-      volatilityScore: number;
-      series: number[];
-    }
-  >;
+function computeMacdTrend(series: number[]): "bullish" | "bearish" | "neutral" {
+  const ema12 = ema(series, 12);
+  const ema26 = ema(series, 26);
+  if (ema12 == null || ema26 == null) {
+    return "neutral";
+  }
+  const macd = ema12 - ema26;
+  if (macd > 0.4) {
+    return "bullish";
+  }
+  if (macd < -0.4) {
+    return "bearish";
+  }
+  return "neutral";
+}
 
-  for (const [key, config] of map.entries()) {
-    const series = reshapeSeries(baseSeries, config.points, config.amp);
-    const first = series[0] || 0;
+function normalizeFundamentals(input?: Partial<StockFundamentals>): StockFundamentals {
+  const n = (value: unknown): number | null => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  return {
+    peRatio: n(input?.peRatio),
+    pbRatio: n(input?.pbRatio),
+    debtToEquity: n(input?.debtToEquity),
+    eps: n(input?.eps),
+    revenueGrowth: n(input?.revenueGrowth),
+    operatingMargin: n(input?.operatingMargin),
+    roe: n(input?.roe),
+    dividendYield: n(input?.dividendYield),
+    beta: n(input?.beta),
+  };
+}
+
+function buildTimeframeInsights(quote: RawProviderQuote): Record<CardTimeframe, TimeframeInsight> {
+  const basePrice = quote.price || 100;
+  const source = quote.timeframeSeries || {};
+
+  const raw: Record<CardTimeframe, number[]> = {
+    "1D": source["1D"] && source["1D"]!.length > 1 ? source["1D"]! : createFallbackSeries(basePrice, 78, 0.0018),
+    "1W": source["1W"] && source["1W"]!.length > 1 ? source["1W"]! : createFallbackSeries(basePrice, 7, 0.003),
+    "1M": source["1M"] && source["1M"]!.length > 1 ? source["1M"]! : createFallbackSeries(basePrice, 22, 0.0045),
+    "3M": source["3M"] && source["3M"]!.length > 1 ? source["3M"]! : createFallbackSeries(basePrice, 66, 0.0065),
+  };
+
+  const insights = {} as Record<CardTimeframe, TimeframeInsight>;
+  (Object.keys(raw) as CardTimeframe[]).forEach((tf) => {
+    const series = raw[tf].map((v) => Number(v.toFixed(2)));
+    const first = series[0] || basePrice;
     const last = series[series.length - 1] || first;
     const changePercent = first > 0 ? ((last - first) / first) * 100 : 0;
-    const low = Math.min(...series);
-    const high = Math.max(...series);
-    const volatility = low > 0 ? ((high - low) / low) * 100 : 0;
 
-    insights[key] = {
-      timeframe: key,
+    insights[tf] = {
+      timeframe: tf,
       changePercent: Number(changePercent.toFixed(2)),
       trendDirection: inferTrend(series),
-      volatilityScore: clamp(Math.round(volatility * 8), 5, 100),
+      volatilityScore: computeVolatilityScore(series),
       series,
     };
-  }
+  });
 
   return insights;
-}
-
-function buildAiAnalysis(args: {
-  changePercent: number;
-  momentumScore: number;
-  volatilityScore: number;
-  volumeSpike: boolean;
-}): string {
-  const { changePercent, momentumScore, volatilityScore, volumeSpike } = args;
-
-  if (volumeSpike && changePercent < 0) {
-    return "Volume divergence warning with distribution pressure detected.";
-  }
-  if (momentumScore >= 72 && changePercent > 0) {
-    return "Bullish accumulation detected with trend continuation probability rising.";
-  }
-  if (momentumScore <= 35 && changePercent < 0) {
-    return "Momentum weakening after recent move; defensive positioning is increasing.";
-  }
-  if (volatilityScore >= ALERT_VOLATILITY_THRESHOLD) {
-    return "Unusual volatility regime detected; expect wider intraday price swings.";
-  }
-  return "Strong recovery probability remains intact if support levels hold.";
 }
 
 function buildSentiment(momentumScore: number, changePercent: number): "bullish" | "bearish" | "neutral" {
@@ -232,6 +237,34 @@ function buildSentiment(momentumScore: number, changePercent: number): "bullish"
     return "bearish";
   }
   return "neutral";
+}
+
+function buildAiNarrative(args: {
+  changePercent: number;
+  momentumScore: number;
+  volatilityScore: number;
+  volumeSpike: boolean;
+  rsi: number;
+  macdTrend: "bullish" | "bearish" | "neutral";
+}): string {
+  const { changePercent, momentumScore, volatilityScore, volumeSpike, rsi, macdTrend } = args;
+
+  if (volumeSpike && changePercent < 0) {
+    return "Distribution pressure detected with rising sell-side participation.";
+  }
+  if (momentumScore > 72 && macdTrend === "bullish") {
+    return "Bullish continuation probability remains elevated while momentum breadth holds.";
+  }
+  if (rsi > 72 && volatilityScore > 60) {
+    return "Overbought + unstable regime: breakout may fade without sustained volume.";
+  }
+  if (rsi < 35 && macdTrend !== "bearish") {
+    return "Oversold recovery setup forming; watch for confirmation above short-term averages.";
+  }
+  if (volatilityScore >= ALERT_VOLATILITY_THRESHOLD) {
+    return "High volatility breakdown risk detected. Position sizing discipline required.";
+  }
+  return "Trend is constructive but requires confirmation from breadth and volume behavior.";
 }
 
 function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
@@ -245,8 +278,8 @@ function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
         ticker: item.ticker,
         type: "price-drop",
         severity: item.changePercent <= -ALERT_CRASH_THRESHOLD ? "critical" : "warning",
-        title: `${item.ticker} rapid downside move`,
-        message: `${item.ticker} is down ${item.changePercent.toFixed(2)}%, breaching the configured drop threshold.`,
+        title: `${item.ticker} downside acceleration`,
+        message: `${item.ticker} is down ${item.changePercent.toFixed(2)}% and crossed the configured downside threshold.`,
         createdAt: now,
       });
     }
@@ -258,7 +291,7 @@ function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
         type: "volatility-spike",
         severity: item.volatilityScore >= 84 ? "critical" : "warning",
         title: `${item.ticker} volatility spike`,
-        message: `${item.ticker} volatility score reached ${item.volatilityScore}/100.`,
+        message: `Volatility score at ${item.volatilityScore}/100. Wider intraday swings expected.`,
         createdAt: now,
       });
     }
@@ -272,34 +305,24 @@ function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
         type: "volume-spike",
         severity: ratio >= ALERT_VOLUME_SPIKE_RATIO * 1.5 ? "critical" : "warning",
         title: `${item.ticker} unusual volume`,
-        message: `${item.ticker} volume is ${ratio.toFixed(2)}x the previous read.`,
+        message: `${item.ticker} volume is ${ratio.toFixed(2)}x the previous interval.`,
         createdAt: now,
       });
     }
 
-    if (item.momentumScore >= 70 && item.changePercent < 0) {
+    if (item.technicalSignals.rsi >= 75 && item.changePercent >= 0) {
       alerts.push({
-        id: `${item.ticker}-divergence-${now}`,
+        id: `${item.ticker}-overbought-${now}`,
         ticker: item.ticker,
         type: "momentum-divergence",
         severity: "warning",
-        title: `${item.ticker} momentum divergence`,
-        message: "Momentum and price action diverged. Distribution pressure may be rising.",
+        title: `${item.ticker} overbought pressure`,
+        message: "RSI suggests stretched move. Watch for consolidation or reversal setup.",
         createdAt: now,
       });
     }
 
-    if (item.volatilityScore >= 80 && item.rsiScore <= 30) {
-      alerts.push({
-        id: `${item.ticker}-unusual-${now}`,
-        ticker: item.ticker,
-        type: "unusual-trading",
-        severity: "critical",
-        title: `${item.ticker} unusual trading behavior`,
-        message: "Extreme volatility and oversold RSI detected in the same regime.",
-        createdAt: now,
-      });
-    }
+    previousVolume.set(item.ticker, item.volume);
   }
 
   return alerts;
@@ -308,11 +331,18 @@ function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
 function buildFallbackQuotes(symbols: string[]): RawProviderQuote[] {
   const nowMinute = Math.floor(Date.now() / 60_000);
   return symbols.map((ticker, index) => {
-    const base = fallbackBasePrice[ticker] || 100 + index * 15;
-    const wave = Math.sin(nowMinute + index) * 0.8;
-    const changePercent = Number((wave * 0.7).toFixed(2));
+    const base = fallbackBasePrice[ticker] || 100 + index * 20;
+    const wave = Math.sin(nowMinute + index) * 0.9;
+    const changePercent = Number((wave * 0.8).toFixed(2));
     const price = Number((base * (1 + changePercent / 100)).toFixed(2));
     const dayRange = Math.max(0.8, price * 0.015);
+
+    const timeframeSeries = {
+      "1D": createFallbackSeries(price, 78, 0.002),
+      "1W": createFallbackSeries(price, 7, 0.0035),
+      "1M": createFallbackSeries(price, 22, 0.005),
+      "3M": createFallbackSeries(price, 66, 0.007),
+    } satisfies Partial<Record<CardTimeframe, number[]>>;
 
     return {
       ticker,
@@ -321,7 +351,8 @@ function buildFallbackQuotes(symbols: string[]): RawProviderQuote[] {
       dayHigh: Number((price + dayRange).toFixed(2)),
       dayLow: Number((price - dayRange).toFixed(2)),
       volume: Math.round(900_000 + (Math.cos(nowMinute + index * 2) + 1) * 350_000),
-      series: createDeterministicSeries(price, changePercent),
+      series: timeframeSeries["1D"],
+      timeframeSeries,
       marketCap: stockMetadata[ticker]?.marketCap ?? null,
       companyName: stockMetadata[ticker]?.name,
       sector: stockMetadata[ticker]?.sector,
@@ -352,11 +383,10 @@ async function fetchProviderQuotes(symbols: string[], timeframe: WatchlistTimefr
 
   return {
     quotes: buildFallbackQuotes(symbols),
-    source: "Fallback simulated feed",
+    source: "Fallback deterministic feed",
     isLive: false,
     fallbackUsed: true,
-    fallbackReason:
-      "No external stock provider responded. Displaying deterministic fallback data until live APIs recover.",
+    fallbackReason: "No external stock provider responded. Deterministic fallback is active.",
   };
 }
 
@@ -367,32 +397,58 @@ function toStockItem(quote: RawProviderQuote, live: boolean): WatchlistStockItem
     assetType: "stock" as const,
   };
 
-  const series = quote.series && quote.series.length > 2 ? quote.series : createDeterministicSeries(quote.price, quote.changePercent);
-  const timeframeInsights = buildTimeframeInsights(series);
-  const volatilityScore = computeVolatilityScore(quote);
-  const momentumScore = computeMomentumScore(quote, series);
-  const rsiScore = computeRsi(series);
-  const trendDirection = inferTrend(series);
+  const timeframeInsights = buildTimeframeInsights(quote);
+  const selectedSeries = timeframeInsights["1D"].series;
+  const volatilityScore = computeVolatilityScore(selectedSeries);
+  const momentumScore = computeMomentumScore(quote.changePercent, selectedSeries);
+  const rsiScore = computeRsi(selectedSeries);
+  const trendDirection = inferTrend(selectedSeries);
   const sentiment = buildSentiment(momentumScore, quote.changePercent);
+
   const prevVolume = previousVolume.get(quote.ticker) || 0;
   const volumeSpike = prevVolume > 0 ? quote.volume / prevVolume >= ALERT_VOLUME_SPIKE_RATIO : false;
-  const aiAnalysis = buildAiAnalysis({
+  const macdTrend = computeMacdTrend(selectedSeries);
+
+  const technicalSignals: TechnicalSignals = {
+    rsi: rsiScore,
+    macdTrend,
+    sma20: sma(selectedSeries, 20),
+    sma50: sma(selectedSeries, 50),
+  };
+
+  const fundamentals = normalizeFundamentals(quote.fundamentals);
+  const aiConfidence = clamp(Math.round(56 + Math.abs(momentumScore - 50) * 0.65 + (volumeSpike ? 7 : 0)), 50, 98);
+  const bullishProbability = clamp(Math.round(44 + (momentumScore - 50) * 0.85 + (sentiment === "bullish" ? 8 : 0)), 5, 95);
+  const bearishProbability = clamp(100 - bullishProbability, 5, 95);
+  const trendContinuationProbability = clamp(
+    Math.round((bullishProbability * 0.58 + (100 - volatilityScore) * 0.26 + (macdTrend === "bullish" ? 14 : macdTrend === "bearish" ? -8 : 0))),
+    5,
+    95
+  );
+
+  const accumulationSignal: "accumulation" | "distribution" | "neutral" =
+    volumeSpike && quote.changePercent > 0
+      ? "accumulation"
+      : volumeSpike && quote.changePercent < 0
+        ? "distribution"
+        : "neutral";
+
+  const aiAnalysis = buildAiNarrative({
     changePercent: quote.changePercent,
     momentumScore,
     volatilityScore,
     volumeSpike,
+    rsi: rsiScore,
+    macdTrend,
   });
-
-  previousVolume.set(quote.ticker, quote.volume);
 
   const dayRange = quote.dayHigh - quote.dayLow;
   const priceRangePosition = dayRange > 0 ? ((quote.price - quote.dayLow) / dayRange) * 100 : 50;
-  const aiConfidence = clamp(Math.round(58 + Math.abs(momentumScore - 50) * 0.6 + (volumeSpike ? 8 : 0)), 50, 98);
-  const supportZone = Number((Math.min(...series) * 0.995).toFixed(2));
-  const resistanceZone = Number((Math.max(...series) * 1.005).toFixed(2));
-  const relativeStrength = clamp(Math.round((momentumScore * 0.65 + (100 - volatilityScore) * 0.35)), 0, 100);
-  const anomalyFlags = [] as string[];
+  const supportZone = Number((Math.min(...selectedSeries) * 0.995).toFixed(2));
+  const resistanceZone = Number((Math.max(...selectedSeries) * 1.005).toFixed(2));
+  const relativeStrength = clamp(Math.round((momentumScore * 0.66 + (100 - volatilityScore) * 0.34)), 0, 100);
 
+  const anomalyFlags: string[] = [];
   if (quote.changePercent <= -ALERT_CRASH_THRESHOLD) {
     anomalyFlags.push("crash");
   }
@@ -402,8 +458,11 @@ function toStockItem(quote: RawProviderQuote, live: boolean): WatchlistStockItem
   if (volumeSpike) {
     anomalyFlags.push("volume");
   }
-  if (momentumScore >= 70 && quote.changePercent < 0) {
-    anomalyFlags.push("divergence");
+  if (rsiScore >= 75) {
+    anomalyFlags.push("overbought");
+  }
+  if (rsiScore <= 30) {
+    anomalyFlags.push("oversold");
   }
 
   return {
@@ -424,7 +483,7 @@ function toStockItem(quote: RawProviderQuote, live: boolean): WatchlistStockItem
     supportZone,
     resistanceZone,
     priceRangePosition: clamp(Number(priceRangePosition.toFixed(1)), 0, 100),
-    miniSeries: series,
+    miniSeries: selectedSeries,
     timeframeInsights,
     sentiment,
     trendDirection,
@@ -432,9 +491,92 @@ function toStockItem(quote: RawProviderQuote, live: boolean): WatchlistStockItem
     aiAnalysis,
     bullishLabel: sentiment === "bearish" ? "bearish" : "bullish",
     aiConfidence,
+    bullishProbability,
+    bearishProbability,
+    trendContinuationProbability,
+    accumulationSignal,
+    technicalSignals,
+    fundamentals,
     anomalyFlags,
     updatedAt: new Date().toISOString(),
   };
+}
+
+function mapToCardTimeframe(timeframe: WatchlistTimeframe): CardTimeframe {
+  if (timeframe === "1W") {
+    return "1W";
+  }
+  if (timeframe === "1M") {
+    return "1M";
+  }
+  if (timeframe === "3M" || timeframe === "1Y") {
+    return "3M";
+  }
+  return "1D";
+}
+
+function buildScreeners(items: WatchlistStockItem[], timeframe: CardTimeframe) {
+  const scoreFor = (item: WatchlistStockItem) => item.timeframeInsights[timeframe]?.changePercent ?? item.changePercent;
+
+  return {
+    biggestGainers: [...items].filter((item) => scoreFor(item) >= 10).sort((a, b) => scoreFor(b) - scoreFor(a)).slice(0, 8),
+    biggestLosers: [...items].filter((item) => scoreFor(item) <= -10).sort((a, b) => scoreFor(a) - scoreFor(b)).slice(0, 8),
+    highMomentum: [...items].filter((item) => item.momentumScore >= 70).sort((a, b) => b.momentumScore - a.momentumScore).slice(0, 8),
+    highVolatility: [...items].filter((item) => item.volatilityScore >= 65).sort((a, b) => b.volatilityScore - a.volatilityScore).slice(0, 8),
+    aiBullishPicks: [...items]
+      .filter((item) => item.sentiment === "bullish" && item.bullishProbability >= 60)
+      .sort((a, b) => b.bullishProbability - a.bullishProbability)
+      .slice(0, 8),
+    aiBearishWarnings: [...items]
+      .filter((item) => item.sentiment === "bearish" && item.bearishProbability >= 58)
+      .sort((a, b) => b.bearishProbability - a.bearishProbability)
+      .slice(0, 8),
+  };
+}
+
+function buildSmartPanels(items: WatchlistStockItem[]): WatchlistScreenerPanel[] {
+  const panel = (title: string, description: string, list: WatchlistStockItem[]) => ({
+    title,
+    description,
+    items: list.slice(0, 6),
+  });
+
+  return [
+    panel(
+      "Momentum Leaders",
+      "Strong directional trend with sustained price strength.",
+      [...items].filter((item) => item.momentumScore >= 72).sort((a, b) => b.momentumScore - a.momentumScore)
+    ),
+    panel(
+      "Oversold Stocks",
+      "Potential rebound setups with depressed RSI regimes.",
+      [...items].filter((item) => item.technicalSignals.rsi <= 35).sort((a, b) => a.technicalSignals.rsi - b.technicalSignals.rsi)
+    ),
+    panel(
+      "Overbought Stocks",
+      "Extended moves where pullback risk is elevated.",
+      [...items].filter((item) => item.technicalSignals.rsi >= 70).sort((a, b) => b.technicalSignals.rsi - a.technicalSignals.rsi)
+    ),
+    panel(
+      "Breakout Candidates",
+      "Price near resistance with positive momentum + trend continuation.",
+      [...items]
+        .filter((item) => item.trendContinuationProbability >= 65 && item.price >= item.resistanceZone * 0.97)
+        .sort((a, b) => b.trendContinuationProbability - a.trendContinuationProbability)
+    ),
+    panel(
+      "Reversal Signals",
+      "Divergence zones where sentiment and momentum are out of sync.",
+      [...items]
+        .filter((item) => (item.sentiment === "bearish" && item.momentumScore > 60) || (item.sentiment === "bullish" && item.momentumScore < 40))
+        .sort((a, b) => Math.abs(50 - b.momentumScore) - Math.abs(50 - a.momentumScore))
+    ),
+    panel(
+      "Unusual Volume Activity",
+      "Volume regimes that can precede sharp directional moves.",
+      [...items].filter((item) => item.anomalyFlags.includes("volume")).sort((a, b) => b.volume - a.volume)
+    ),
+  ];
 }
 
 export async function getWatchlistSnapshot(params: {
@@ -456,14 +598,17 @@ export async function getWatchlistSnapshot(params: {
   }
 
   const providerResult = await fetchProviderQuotes(symbols, timeframe);
+
   const items = providerResult.quotes
     .map((quote) => toStockItem(quote, providerResult.isLive))
     .sort((a, b) => b.momentumScore - a.momentumScore);
 
   const alerts = buildAlerts(items);
-  const topMovers = [...items]
-    .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
-    .slice(0, 5);
+  const topMovers = [...items].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent)).slice(0, 6);
+
+  const screenerTimeframe = mapToCardTimeframe(timeframe);
+  const screeners = buildScreeners(items, screenerTimeframe);
+  const smartPanels = buildSmartPanels(items);
 
   const riskSignals = [
     {
@@ -478,8 +623,8 @@ export async function getWatchlistSnapshot(params: {
     },
     {
       label: "Alert Pressure",
-      score: clamp(alerts.length * 14, 0, 100),
-      detail: "Aggregate intensity based on active drop/volatility/volume alerts.",
+      score: clamp(alerts.length * 12, 0, 100),
+      detail: "Aggregate intensity from active downside, volume, and volatility signals.",
     },
   ];
 
@@ -493,6 +638,9 @@ export async function getWatchlistSnapshot(params: {
     items,
     alerts,
     topMovers,
+    screenerTimeframe,
+    screeners,
+    smartPanels,
     riskSignals,
     pollIntervalSeconds: Math.max(10, POLL_INTERVAL_SECONDS),
   };

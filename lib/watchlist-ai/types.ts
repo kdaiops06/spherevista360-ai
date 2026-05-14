@@ -19,6 +19,25 @@ export interface TimeframeInsight {
   series: number[];
 }
 
+export interface StockFundamentals {
+  peRatio: number | null;
+  pbRatio: number | null;
+  debtToEquity: number | null;
+  eps: number | null;
+  revenueGrowth: number | null;
+  operatingMargin: number | null;
+  roe: number | null;
+  dividendYield: number | null;
+  beta: number | null;
+}
+
+export interface TechnicalSignals {
+  rsi: number;
+  macdTrend: "bullish" | "bearish" | "neutral";
+  sma20: number | null;
+  sma50: number | null;
+}
+
 export interface WatchlistStockItem {
   ticker: string;
   companyName: string;
@@ -45,8 +64,20 @@ export interface WatchlistStockItem {
   aiAnalysis: string;
   bullishLabel: "bullish" | "bearish";
   aiConfidence: number;
+  bullishProbability: number;
+  bearishProbability: number;
+  trendContinuationProbability: number;
+  accumulationSignal: "accumulation" | "distribution" | "neutral";
+  technicalSignals: TechnicalSignals;
+  fundamentals: StockFundamentals;
   anomalyFlags: string[];
   updatedAt: string;
+}
+
+export interface WatchlistScreenerPanel {
+  title: string;
+  description: string;
+  items: WatchlistStockItem[];
 }
 
 export interface WatchlistAlert {
@@ -69,6 +100,16 @@ export interface WatchlistSnapshot {
   items: WatchlistStockItem[];
   alerts: WatchlistAlert[];
   topMovers: WatchlistStockItem[];
+  screenerTimeframe: CardTimeframe;
+  screeners: {
+    biggestGainers: WatchlistStockItem[];
+    biggestLosers: WatchlistStockItem[];
+    highMomentum: WatchlistStockItem[];
+    highVolatility: WatchlistStockItem[];
+    aiBullishPicks: WatchlistStockItem[];
+    aiBearishWarnings: WatchlistStockItem[];
+  };
+  smartPanels: WatchlistScreenerPanel[];
   riskSignals: Array<{
     label: string;
     score: number;
@@ -85,9 +126,11 @@ export interface RawProviderQuote {
   dayLow: number;
   volume: number;
   series?: number[];
+  timeframeSeries?: Partial<Record<CardTimeframe, number[]>>;
   marketCap?: number | null;
   companyName?: string;
   sector?: string;
+  fundamentals?: Partial<StockFundamentals>;
 }
 
 export interface ProviderFetchContext {
