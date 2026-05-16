@@ -21,14 +21,72 @@ export interface TimeframeInsight {
 
 export interface StockFundamentals {
   peRatio: number | null;
+  forwardPe: number | null;
   pbRatio: number | null;
+  pegRatio: number | null;
   debtToEquity: number | null;
   eps: number | null;
+  revenue: number | null;
   revenueGrowth: number | null;
   operatingMargin: number | null;
   roe: number | null;
+  roce: number | null;
+  freeCashFlow: number | null;
   dividendYield: number | null;
   beta: number | null;
+}
+
+export interface ProviderHealthStatus {
+  provider: string;
+  configured: boolean;
+  ok: boolean;
+  status?: "healthy" | "degraded" | "invalid-key" | "rate-limited" | "unavailable";
+  reachable?: boolean;
+  stale?: boolean;
+  staleMs?: number;
+  latencyMs?: number;
+  error?: string;
+  lastSuccessAt?: string;
+  retryCount?: number;
+  failureCount?: number;
+  quotaRemaining?: number;
+  quotaLimit?: number;
+  websocketConnected?: boolean;
+}
+
+export interface ProviderDiagnosticsReport {
+  generatedAt: string;
+  overallStatus: "healthy" | "degraded" | "invalid-key" | "rate-limited" | "unavailable";
+  websocket: {
+    connected: boolean;
+    reconnectAttempts: number;
+    subscribedSymbols: number;
+    lastConnectedAt?: string;
+    lastMessageAt?: string;
+    lastReconnectAt?: string;
+    lastError?: string;
+  };
+  providers: Array<{
+    provider: string;
+    configured: boolean;
+    keyPresent: boolean;
+    status: "healthy" | "degraded" | "invalid-key" | "rate-limited" | "unavailable";
+    reachable: boolean;
+    latencyMs?: number;
+    quotaRemaining?: number;
+    quotaLimit?: number;
+    websocketConnected?: boolean;
+    websocketError?: string;
+    stale: boolean;
+    staleMs?: number;
+    lastSuccessfulFetch?: string;
+    lastFailureAt?: string;
+    retryCount: number;
+    failureCount: number;
+    error?: string;
+    messages: string[];
+    checkedAt: string;
+  }>;
 }
 
 export interface TechnicalSignals {
@@ -96,6 +154,9 @@ export interface WatchlistSnapshot {
   isLive: boolean;
   fallbackUsed: boolean;
   fallbackReason?: string;
+  stale: boolean;
+  staleReason?: string;
+  providerHealth: ProviderHealthStatus[];
   updatedAt: string;
   items: WatchlistStockItem[];
   alerts: WatchlistAlert[];
@@ -126,6 +187,7 @@ export interface RawProviderQuote {
   dayLow: number;
   volume: number;
   series?: number[];
+  dailySeries?: number[];
   timeframeSeries?: Partial<Record<CardTimeframe, number[]>>;
   marketCap?: number | null;
   companyName?: string;

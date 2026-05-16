@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -42,6 +42,7 @@ import type {
 } from "@/lib/watchlist-ai/types";
 import { InstitutionalTrendChart } from "@/components/watchlist-ai/InstitutionalTrendChart";
 import { MiniLightweightChart } from "@/components/watchlist-ai/MiniLightweightChart";
+import { ProviderDiagnosticsPanel } from "@/components/watchlist-ai/ProviderDiagnosticsPanel";
 
 interface WatchlistDashboardClientProps {
   initialSnapshot: WatchlistSnapshot;
@@ -73,6 +74,8 @@ const sortConfig = [
 
 const timeframeOptions: WatchlistTimeframe[] = ["1D", "1W", "1M", "3M", "1Y"];
 const cardTimeframes: CardTimeframe[] = ["1D", "1W", "1M", "3M"];
+const MIN_POLL_INTERVAL_SECONDS = 10;
+const FALLBACK_POLL_INTERVAL_SECONDS = 15;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -423,6 +426,11 @@ export function WatchlistDashboardClient({
   const [thresholds, setThresholds] = useState<ThresholdFilters>(defaultThresholds);
   const [screenerWindow, setScreenerWindow] = useState<CardTimeframe>(initialSnapshot.screenerTimeframe);
   const symbolsKey = watchlistSymbols.join(",");
+  const initialSymbolsKey = useMemo(() => initialSnapshot.items.map((item) => item.ticker).join(","), [initialSnapshot]);
+  const skippedInitialFetchRef = useRef(false);
+  const clientIdRef = useRef(`wl-${Math.random().toString(36).slice(2, 10)}`);
+  const inflightFetchRef = useRef<Promise<void> | null>(null);
+  const lastFetchStartedAtRef = useRef(0);
 
   const alertTickers = useMemo(() => new Set(snapshot.alerts.map((alert) => alert.ticker)), [snapshot.alerts]);
 
@@ -479,6 +487,14 @@ export function WatchlistDashboardClient({
     [visibleItems]
   );
 
+  const pollIntervalSeconds = useMemo(() => {
+    const raw = Number(snapshot.pollIntervalSeconds);
+    if (!Number.isFinite(raw)) {
+      return FALLBACK_POLL_INTERVAL_SECONDS;
+    }
+    return Math.max(MIN_POLL_INTERVAL_SECONDS, Math.round(raw));
+  }, [snapshot.pollIntervalSeconds]);
+
   const screened = useMemo(() => {
     const score = (item: WatchlistStockItem) => item.timeframeInsights[screenerWindow]?.changePercent ?? item.changePercent;
     return {
@@ -489,44 +505,72 @@ export function WatchlistDashboardClient({
 
   const fetchSnapshot = useCallback(
     async (forceRefresh = false) => {
+      if (inflightFetchRef.current) {
+        return inflightFetchRef.current;
+      }
+
+      const now = Date.now();
+      if (!forceRefresh && now - lastFetchStartedAtRef.current < MIN_POLL_INTERVAL_SECONDS * 1000) {
+        return;
+      }
+
       const params = new URLSearchParams();
       params.set("timeframe", timeframe);
       params.set("symbols", symbolsKey);
+      params.set("clientId", clientIdRef.current);
       if (forceRefresh) {
         params.set("force", "1");
       }
 
-      const response = await fetch(`/api/watchlist-ai?${params.toString()}`, {
-        cache: "no-store",
-      });
+      const request = (async () => {
+        lastFetchStartedAtRef.current = Date.now();
+        const response = await fetch(`/api/watchlist-ai?${params.toString()}`, {
+          cache: "no-store",
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to load watchlist intelligence");
+        if (!response.ok) {
+          throw new Error("Failed to load watchlist intelligence");
+        }
+
+        const data = (await response.json()) as WatchlistSnapshot;
+        setSnapshot(data);
+        setError(null);
+      })();
+
+      inflightFetchRef.current = request;
+      try {
+        await request;
+      } finally {
+        inflightFetchRef.current = null;
       }
-
-      const data = (await response.json()) as WatchlistSnapshot;
-      setSnapshot(data);
-      setError(null);
     },
     [symbolsKey, timeframe]
   );
 
   useEffect(() => {
+    const matchesInitialSnapshot = timeframe === initialSnapshot.timeframe && symbolsKey === initialSymbolsKey;
+
+    if (!skippedInitialFetchRef.current && matchesInitialSnapshot) {
+      skippedInitialFetchRef.current = true;
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     fetchSnapshot(false)
       .catch(() => setError("Live watchlist feed is temporarily unavailable."))
       .finally(() => setIsLoading(false));
-  }, [fetchSnapshot]);
+  }, [fetchSnapshot, initialSnapshot.timeframe, initialSymbolsKey, symbolsKey, timeframe]);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_WATCHLIST_AI_STREAM !== "1") {
       const interval = setInterval(() => {
         fetchSnapshot(false).catch(() => undefined);
-      }, Math.max(10, snapshot.pollIntervalSeconds) * 1000);
+      }, pollIntervalSeconds * 1000);
       return () => clearInterval(interval);
     }
 
-    const streamUrl = `/api/watchlist-ai/stream?timeframe=${timeframe}&symbols=${symbolsKey}`;
+    const streamUrl = `/api/watchlist-ai/stream?timeframe=${timeframe}&symbols=${symbolsKey}&clientId=${clientIdRef.current}`;
     const source = new EventSource(streamUrl);
 
     source.addEventListener("snapshot", (event) => {
@@ -545,7 +589,7 @@ export function WatchlistDashboardClient({
     return () => {
       source.close();
     };
-  }, [fetchSnapshot, snapshot.pollIntervalSeconds, symbolsKey, timeframe]);
+  }, [fetchSnapshot, pollIntervalSeconds, symbolsKey, timeframe]);
 
   const majorTrend = useMemo(() => {
     const avg = snapshot.items.reduce((sum, item) => sum + item.changePercent, 0) / Math.max(1, snapshot.items.length);
@@ -666,6 +710,8 @@ export function WatchlistDashboardClient({
             </div>
           </div>
         </motion.section>
+
+        <ProviderDiagnosticsPanel />
 
         <section className="mt-7 rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
