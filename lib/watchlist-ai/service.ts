@@ -1,10 +1,12 @@
 import { WATCHLIST_PROVIDER_ORDER } from "@/lib/watchlist-ai/providers";
+import { recordStaleFeedWarning } from "@/lib/watchlist-ai/provider-diagnostics";
 import type {
   CardTimeframe,
   RawProviderQuote,
   StockFundamentals,
   TechnicalSignals,
   TimeframeInsight,
+  ProviderHealthStatus,
   WatchlistAlert,
   WatchlistScreenerPanel,
   WatchlistSnapshot,
@@ -14,13 +16,14 @@ import type {
 
 const DEFAULT_SYMBOLS = ["AAPL", "MSFT", "NVDA", "TSLA", "GOOGL", "AMZN", "META"];
 const CACHE_TTL_SECONDS = Number(process.env.WATCHLIST_AI_CACHE_TTL_SECONDS || 45);
-const POLL_INTERVAL_SECONDS = Number(process.env.WATCHLIST_AI_POLL_INTERVAL_SECONDS || 20);
+const POLL_INTERVAL_SECONDS = Number(process.env.WATCHLIST_AI_POLL_INTERVAL_SECONDS || 10);
 const ALERT_DROP_THRESHOLD = Number(process.env.WATCHLIST_AI_ALERT_DROP_THRESHOLD || 3.5);
 const ALERT_CRASH_THRESHOLD = 10;
 const ALERT_VOLATILITY_THRESHOLD = Number(process.env.WATCHLIST_AI_ALERT_VOLATILITY_THRESHOLD || 72);
 const ALERT_VOLUME_SPIKE_RATIO = Number(process.env.WATCHLIST_AI_ALERT_VOLUME_SPIKE_RATIO || 1.7);
 
 const watchlistCache = new Map<string, { expiresAt: number; value: WatchlistSnapshot }>();
+const inflightSnapshots = new Map<string, Promise<WatchlistSnapshot>>();
 const previousVolume = new Map<string, number>();
 
 const stockMetadata: Record<string, { name: string; sector: string; assetType: "stock" | "etf" | "crypto"; marketCap?: number }> = {
@@ -37,23 +40,6 @@ const stockMetadata: Record<string, { name: string; sector: string; assetType: "
   AMD: { name: "Advanced Micro Devices", sector: "Semiconductors", assetType: "stock", marketCap: 280_000_000_000 },
   BTCUSD: { name: "Bitcoin", sector: "Crypto", assetType: "crypto" },
   ETHUSD: { name: "Ethereum", sector: "Crypto", assetType: "crypto" },
-};
-
-const fallbackBasePrice: Record<string, number> = {
-  AAPL: 212.45,
-  MSFT: 463.2,
-  NVDA: 1208.95,
-  TSLA: 183.55,
-  GOOGL: 176.7,
-  AMZN: 191.3,
-  META: 521.8,
-  AMD: 168.2,
-  NFLX: 694.4,
-  PLTR: 30.6,
-  BTCUSD: 67320,
-  ETHUSD: 3180,
-  SPY: 528.3,
-  QQQ: 457.8,
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -82,16 +68,6 @@ function inferTrend(series: number[]): "up" | "down" | "flat" {
     return "flat";
   }
   return delta > 0 ? "up" : "down";
-}
-
-function createFallbackSeries(price: number, points: number, waveFactor: number): number[] {
-  const base = Math.max(1, price * 0.985);
-  return Array.from({ length: points }).map((_, index) => {
-    const t = index / Math.max(1, points - 1);
-    const drift = base + (price - base) * t;
-    const wave = Math.sin(index * 0.8) * price * waveFactor;
-    return Number((drift + wave).toFixed(2));
-  });
 }
 
 function computeVolatilityScore(series: number[]): number {
@@ -188,32 +164,36 @@ function normalizeFundamentals(input?: Partial<StockFundamentals>): StockFundame
 
   return {
     peRatio: n(input?.peRatio),
+    forwardPe: n(input?.forwardPe),
     pbRatio: n(input?.pbRatio),
+    pegRatio: n(input?.pegRatio),
     debtToEquity: n(input?.debtToEquity),
     eps: n(input?.eps),
+    revenue: n(input?.revenue),
     revenueGrowth: n(input?.revenueGrowth),
     operatingMargin: n(input?.operatingMargin),
     roe: n(input?.roe),
+    roce: n(input?.roce),
+    freeCashFlow: n(input?.freeCashFlow),
     dividendYield: n(input?.dividendYield),
     beta: n(input?.beta),
   };
 }
 
 function buildTimeframeInsights(quote: RawProviderQuote): Record<CardTimeframe, TimeframeInsight> {
-  const basePrice = quote.price || 100;
   const source = quote.timeframeSeries || {};
 
   const raw: Record<CardTimeframe, number[]> = {
-    "1D": source["1D"] && source["1D"]!.length > 1 ? source["1D"]! : createFallbackSeries(basePrice, 78, 0.0018),
-    "1W": source["1W"] && source["1W"]!.length > 1 ? source["1W"]! : createFallbackSeries(basePrice, 7, 0.003),
-    "1M": source["1M"] && source["1M"]!.length > 1 ? source["1M"]! : createFallbackSeries(basePrice, 22, 0.0045),
-    "3M": source["3M"] && source["3M"]!.length > 1 ? source["3M"]! : createFallbackSeries(basePrice, 66, 0.0065),
+    "1D": source["1D"] && source["1D"]!.length > 1 ? source["1D"]! : [],
+    "1W": source["1W"] && source["1W"]!.length > 1 ? source["1W"]! : [],
+    "1M": source["1M"] && source["1M"]!.length > 1 ? source["1M"]! : [],
+    "3M": source["3M"] && source["3M"]!.length > 1 ? source["3M"]! : [],
   };
 
   const insights = {} as Record<CardTimeframe, TimeframeInsight>;
   (Object.keys(raw) as CardTimeframe[]).forEach((tf) => {
     const series = raw[tf].map((v) => Number(v.toFixed(2)));
-    const first = series[0] || basePrice;
+    const first = series[0] || quote.price;
     const last = series[series.length - 1] || first;
     const changePercent = first > 0 ? ((last - first) / first) * 100 : 0;
 
@@ -328,65 +308,84 @@ function buildAlerts(items: WatchlistStockItem[]): WatchlistAlert[] {
   return alerts;
 }
 
-function buildFallbackQuotes(symbols: string[]): RawProviderQuote[] {
-  const nowMinute = Math.floor(Date.now() / 60_000);
-  return symbols.map((ticker, index) => {
-    const base = fallbackBasePrice[ticker] || 100 + index * 20;
-    const wave = Math.sin(nowMinute + index) * 0.9;
-    const changePercent = Number((wave * 0.8).toFixed(2));
-    const price = Number((base * (1 + changePercent / 100)).toFixed(2));
-    const dayRange = Math.max(0.8, price * 0.015);
-
-    const timeframeSeries = {
-      "1D": createFallbackSeries(price, 78, 0.002),
-      "1W": createFallbackSeries(price, 7, 0.0035),
-      "1M": createFallbackSeries(price, 22, 0.005),
-      "3M": createFallbackSeries(price, 66, 0.007),
-    } satisfies Partial<Record<CardTimeframe, number[]>>;
-
-    return {
-      ticker,
-      price,
-      changePercent,
-      dayHigh: Number((price + dayRange).toFixed(2)),
-      dayLow: Number((price - dayRange).toFixed(2)),
-      volume: Math.round(900_000 + (Math.cos(nowMinute + index * 2) + 1) * 350_000),
-      series: timeframeSeries["1D"],
-      timeframeSeries,
-      marketCap: stockMetadata[ticker]?.marketCap ?? null,
-      companyName: stockMetadata[ticker]?.name,
-      sector: stockMetadata[ticker]?.sector,
-    };
-  });
-}
-
 async function fetchProviderQuotes(symbols: string[], timeframe: WatchlistTimeframe) {
+  const providerHealth: ProviderHealthStatus[] = WATCHLIST_PROVIDER_ORDER.map((provider) => ({
+    provider: provider.name,
+    configured: provider.isConfigured(),
+    ok: false,
+    status: provider.isConfigured() ? "degraded" : "unavailable",
+  }));
+
   for (const provider of WATCHLIST_PROVIDER_ORDER) {
+    const providerEntry = providerHealth.find((entry) => entry.provider === provider.name);
     if (!provider.isConfigured()) {
+      if (providerEntry) {
+        providerEntry.error = "not_configured";
+        providerEntry.status = "unavailable";
+        providerEntry.reachable = false;
+      }
       continue;
     }
 
     try {
+      const start = Date.now();
       const quotes = await provider.fetchQuotes({ symbols, timeframe });
       if (quotes.length > 0) {
+        if (providerEntry) {
+          providerEntry.ok = true;
+          providerEntry.latencyMs = Date.now() - start;
+          providerEntry.lastSuccessAt = new Date().toISOString();
+          providerEntry.status = "healthy";
+          providerEntry.reachable = true;
+          providerEntry.stale = false;
+        }
         return {
           quotes,
           source: provider.name,
           isLive: true,
           fallbackUsed: false,
+          providerHealth,
         };
       }
+      if (providerEntry) {
+        providerEntry.error = "empty_response";
+        providerEntry.status = "degraded";
+        providerEntry.reachable = true;
+      }
     } catch (error) {
+      const message = error instanceof Error ? error.message : "provider_error";
+      if (providerEntry) {
+        providerEntry.error = message;
+        providerEntry.reachable = false;
+        const lowered = message.toLowerCase();
+        if ((lowered.includes("invalid") && lowered.includes("key")) || lowered.includes("http 401") || lowered.includes("unauthorized")) {
+          providerEntry.status = "invalid-key";
+        } else if ((lowered.includes("rate") && lowered.includes("limit")) || lowered.includes("http 429") || lowered.includes("budget exhausted")) {
+          providerEntry.status = "rate-limited";
+        } else if (lowered.includes("timeout") || lowered.includes("abort") || lowered.includes("network") || lowered.includes("empty_response")) {
+          providerEntry.status = "degraded";
+        } else {
+          providerEntry.status = "unavailable";
+        }
+      }
       console.warn(`[watchlist-ai] ${provider.name} fetch failed`, error);
     }
   }
 
+  recordStaleFeedWarning("all_providers_failed_to_return_live_quotes");
+  console.error("[watchlist-ai] fallback-engaged", {
+    reason: "No external stock provider responded with real market data.",
+    symbols,
+    timeframe,
+  });
+
   return {
-    quotes: buildFallbackQuotes(symbols),
-    source: "Fallback deterministic feed",
+    quotes: [],
+    source: "No provider available",
     isLive: false,
     fallbackUsed: true,
-    fallbackReason: "No external stock provider responded. Deterministic fallback is active.",
+    fallbackReason: "No external stock provider responded with real market data.",
+    providerHealth,
   };
 }
 
@@ -444,8 +443,10 @@ function toStockItem(quote: RawProviderQuote, live: boolean): WatchlistStockItem
 
   const dayRange = quote.dayHigh - quote.dayLow;
   const priceRangePosition = dayRange > 0 ? ((quote.price - quote.dayLow) / dayRange) * 100 : 50;
-  const supportZone = Number((Math.min(...selectedSeries) * 0.995).toFixed(2));
-  const resistanceZone = Number((Math.max(...selectedSeries) * 1.005).toFixed(2));
+  const supportZone =
+    selectedSeries.length > 0 ? Number((Math.min(...selectedSeries) * 0.995).toFixed(2)) : Number((quote.dayLow * 0.995).toFixed(2));
+  const resistanceZone =
+    selectedSeries.length > 0 ? Number((Math.max(...selectedSeries) * 1.005).toFixed(2)) : Number((quote.dayHigh * 1.005).toFixed(2));
   const relativeStrength = clamp(Math.round((momentumScore * 0.66 + (100 - volatilityScore) * 0.34)), 0, 100);
 
   const anomalyFlags: string[] = [];
@@ -595,60 +596,80 @@ export async function getWatchlistSnapshot(params: {
     if (cached && cached.expiresAt > now) {
       return cached.value;
     }
+
+    const inflight = inflightSnapshots.get(cacheKey);
+    if (inflight) {
+      return inflight;
+    }
   }
 
-  const providerResult = await fetchProviderQuotes(symbols, timeframe);
+  const snapshotPromise = (async () => {
+    const providerResult = await fetchProviderQuotes(symbols, timeframe);
 
-  const items = providerResult.quotes
-    .map((quote) => toStockItem(quote, providerResult.isLive))
-    .sort((a, b) => b.momentumScore - a.momentumScore);
+    const items = providerResult.quotes
+      .map((quote) => toStockItem(quote, providerResult.isLive))
+      .sort((a, b) => b.momentumScore - a.momentumScore);
 
-  const alerts = buildAlerts(items);
-  const topMovers = [...items].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent)).slice(0, 6);
+    const alerts = buildAlerts(items);
+    const topMovers = [...items].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent)).slice(0, 6);
 
-  const screenerTimeframe = mapToCardTimeframe(timeframe);
-  const screeners = buildScreeners(items, screenerTimeframe);
-  const smartPanels = buildSmartPanels(items);
+    const screenerTimeframe = mapToCardTimeframe(timeframe);
+    const screeners = buildScreeners(items, screenerTimeframe);
+    const smartPanels = buildSmartPanels(items);
 
-  const riskSignals = [
-    {
-      label: "Portfolio Heat",
-      score: clamp(Math.round(items.reduce((sum, item) => sum + item.volatilityScore, 0) / Math.max(items.length, 1)), 0, 100),
-      detail: "Cross-watchlist volatility and dispersion score.",
-    },
-    {
-      label: "Momentum Breadth",
-      score: clamp(Math.round(items.reduce((sum, item) => sum + item.momentumScore, 0) / Math.max(items.length, 1)), 0, 100),
-      detail: "Average momentum strength across tracked symbols.",
-    },
-    {
-      label: "Alert Pressure",
-      score: clamp(alerts.length * 12, 0, 100),
-      detail: "Aggregate intensity from active downside, volume, and volatility signals.",
-    },
-  ];
+    const riskSignals = [
+      {
+        label: "Portfolio Heat",
+        score: clamp(Math.round(items.reduce((sum, item) => sum + item.volatilityScore, 0) / Math.max(items.length, 1)), 0, 100),
+        detail: "Cross-watchlist volatility and dispersion score.",
+      },
+      {
+        label: "Momentum Breadth",
+        score: clamp(Math.round(items.reduce((sum, item) => sum + item.momentumScore, 0) / Math.max(items.length, 1)), 0, 100),
+        detail: "Average momentum strength across tracked symbols.",
+      },
+      {
+        label: "Alert Pressure",
+        score: clamp(alerts.length * 12, 0, 100),
+        detail: "Aggregate intensity from active downside, volume, and volatility signals.",
+      },
+    ];
 
-  const snapshot: WatchlistSnapshot = {
-    timeframe,
-    source: providerResult.source,
-    isLive: providerResult.isLive,
-    fallbackUsed: providerResult.fallbackUsed,
-    fallbackReason: providerResult.fallbackReason,
-    updatedAt: new Date().toISOString(),
-    items,
-    alerts,
-    topMovers,
-    screenerTimeframe,
-    screeners,
-    smartPanels,
-    riskSignals,
-    pollIntervalSeconds: Math.max(10, POLL_INTERVAL_SECONDS),
-  };
+    const snapshot: WatchlistSnapshot = {
+      timeframe,
+      source: providerResult.source,
+      isLive: providerResult.isLive,
+      fallbackUsed: providerResult.fallbackUsed,
+      fallbackReason: providerResult.fallbackReason,
+      stale: !providerResult.isLive,
+      staleReason: providerResult.isLive ? undefined : providerResult.fallbackReason,
+      providerHealth: providerResult.providerHealth,
+      updatedAt: new Date().toISOString(),
+      items,
+      alerts,
+      topMovers,
+      screenerTimeframe,
+      screeners,
+      smartPanels,
+      riskSignals,
+      pollIntervalSeconds: Math.max(10, POLL_INTERVAL_SECONDS),
+    };
 
-  watchlistCache.set(cacheKey, {
-    expiresAt: now + ttlMs,
-    value: snapshot,
-  });
+    watchlistCache.set(cacheKey, {
+      expiresAt: now + ttlMs,
+      value: snapshot,
+    });
 
-  return snapshot;
+    return snapshot;
+  })();
+
+  if (!params.forceRefresh) {
+    inflightSnapshots.set(cacheKey, snapshotPromise);
+  }
+
+  try {
+    return await snapshotPromise;
+  } finally {
+    inflightSnapshots.delete(cacheKey);
+  }
 }

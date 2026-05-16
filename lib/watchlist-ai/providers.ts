@@ -5,12 +5,29 @@ import type {
   RawProviderQuote,
   StockFundamentals,
 } from "@/lib/watchlist-ai/types";
+import { finnhubSocketManager } from "@/lib/websocket/finnhub";
+import {
+  recordProviderAttempt,
+  recordProviderFailure,
+  recordProviderRateLimit,
+  recordProviderRetry,
+  recordProviderSuccess,
+  startProviderStartupValidation,
+} from "@/lib/watchlist-ai/provider-diagnostics";
 
 const REQUEST_TIMEOUT_MS = Number(process.env.WATCHLIST_AI_REQUEST_TIMEOUT_MS || 7000);
 const REQUEST_RETRIES = Number(process.env.WATCHLIST_AI_RETRY_ATTEMPTS || 2);
 const MAX_REQUESTS_PER_MINUTE = Number(process.env.WATCHLIST_AI_MAX_REQUESTS_PER_MINUTE || 80);
+const PROVIDER_CACHE_TTLS_MS = {
+  quote: Number(process.env.WATCHLIST_AI_QUOTE_CACHE_MS || 8_000),
+  intraday: Number(process.env.WATCHLIST_AI_INTRADAY_CACHE_MS || 120_000),
+  daily: Number(process.env.WATCHLIST_AI_DAILY_CACHE_MS || 900_000),
+  metric: Number(process.env.WATCHLIST_AI_METRIC_CACHE_MS || 21_600_000),
+  profile: Number(process.env.WATCHLIST_AI_PROFILE_CACHE_MS || 21_600_000),
+} as const;
 
 const requestLog = new Map<string, number[]>();
+const responseCache = new Map<string, { expiresAt: number; value: unknown }>();
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -25,14 +42,8 @@ function takeLast(series: number[], count: number): number[] {
 
 function normalizeSeries(series: number[] | undefined, fallbackPrice: number): number[] {
   const safe = (series || []).filter((point) => Number.isFinite(point) && point > 0);
-  if (safe.length < 2) {
-    return [
-      fallbackPrice * 0.98,
-      fallbackPrice * 0.985,
-      fallbackPrice * 0.99,
-      fallbackPrice * 0.995,
-      fallbackPrice,
-    ].map((n) => Number(n.toFixed(2)));
+  if (safe.length < 2 || !Number.isFinite(fallbackPrice) || fallbackPrice <= 0) {
+    return [];
   }
   return takeLast(safe, 78).map((point) => Number(point.toFixed(2)));
 }
@@ -42,18 +53,16 @@ function buildTimeframeSeries(args: { intraday?: number[]; daily?: number[]; fal
   const safeDaily = (daily || []).filter((v) => Number.isFinite(v) && v > 0);
   const safeIntraday = (intraday || []).filter((v) => Number.isFinite(v) && v > 0);
 
-  const fallback = normalizeSeries(undefined, fallbackPrice);
-
   const oneDay = safeIntraday.length > 8 ? takeLast(safeIntraday, 78) : takeLast(safeDaily, 22);
   const oneWeek = takeLast(safeDaily, 7);
   const oneMonth = takeLast(safeDaily, 22);
   const threeMonth = takeLast(safeDaily, 66);
 
   return {
-    "1D": oneDay.length >= 2 ? oneDay : fallback,
-    "1W": oneWeek.length >= 2 ? oneWeek : fallback,
-    "1M": oneMonth.length >= 2 ? oneMonth : fallback,
-    "3M": threeMonth.length >= 2 ? threeMonth : fallback,
+    "1D": oneDay.length >= 2 ? oneDay : [],
+    "1W": oneWeek.length >= 2 ? oneWeek : [],
+    "1M": oneMonth.length >= 2 ? oneMonth : [],
+    "3M": threeMonth.length >= 2 ? threeMonth : [],
   };
 }
 
@@ -68,12 +77,17 @@ function normalizeFundamentals(input?: Partial<StockFundamentals>): Partial<Stoc
 
   return {
     peRatio: asNumber(input.peRatio),
+    forwardPe: asNumber(input.forwardPe),
     pbRatio: asNumber(input.pbRatio),
+    pegRatio: asNumber(input.pegRatio),
     debtToEquity: asNumber(input.debtToEquity),
     eps: asNumber(input.eps),
+    revenue: asNumber(input.revenue),
     revenueGrowth: asNumber(input.revenueGrowth),
     operatingMargin: asNumber(input.operatingMargin),
     roe: asNumber(input.roe),
+    roce: asNumber(input.roce),
+    freeCashFlow: asNumber(input.freeCashFlow),
     dividendYield: asNumber(input.dividendYield),
     beta: asNumber(input.beta),
   };
@@ -102,9 +116,11 @@ async function fetchJsonWithRetry<T>(providerName: string, url: string): Promise
 
   for (let attempt = 0; attempt <= REQUEST_RETRIES; attempt += 1) {
     try {
+      recordProviderAttempt(providerName);
       trackProviderRequest(providerName);
 
       const controller = new AbortController();
+      const startedAt = Date.now();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
       const response = await fetch(url, {
@@ -117,19 +133,48 @@ async function fetchJsonWithRetry<T>(providerName: string, url: string): Promise
       clearTimeout(timeout);
 
       if (!response.ok) {
+        if (response.status === 429) {
+          recordProviderRateLimit(providerName, `${providerName} HTTP 429`);
+        }
         throw new Error(`${providerName} HTTP ${response.status}`);
       }
 
-      return (await response.json()) as T;
+      const payload = (await response.json()) as T;
+      recordProviderSuccess(providerName, Date.now() - startedAt);
+      return payload;
     } catch (error) {
       lastError = error;
+      recordProviderFailure(providerName, error);
       if (attempt < REQUEST_RETRIES) {
+        recordProviderRetry(providerName, attempt + 1, REQUEST_RETRIES + 1, error);
         await sleep(220 * (attempt + 1));
       }
     }
   }
 
   throw lastError instanceof Error ? lastError : new Error(`${providerName} request failed`);
+}
+
+async function fetchCachedJsonWithRetry<T>(args: {
+  providerName: string;
+  cacheKey: string;
+  ttlMs: number;
+  url: string;
+}): Promise<T> {
+  const { providerName, cacheKey, ttlMs, url } = args;
+  const cached = responseCache.get(cacheKey);
+  const now = Date.now();
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value as T;
+  }
+
+  const value = await fetchJsonWithRetry<T>(providerName, url);
+  responseCache.set(cacheKey, {
+    expiresAt: now + ttlMs,
+    value,
+  });
+  return value;
 }
 
 function sanitizeQuote(quote: RawProviderQuote): RawProviderQuote | null {
@@ -163,6 +208,8 @@ const finnhubClient: ProviderClient = {
       return [];
     }
 
+    finnhubSocketManager.subscribe(context.symbols);
+
     const now = Math.floor(Date.now() / 1000);
     const fromDaily = now - 120 * 86_400;
     const fromIntraday = now - 2 * 86_400;
@@ -176,44 +223,84 @@ const finnhubClient: ProviderClient = {
         const profileUrl = `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(symbol)}&token=${apiKey}`;
 
         const [quoteData, dailyCandleData, intradayCandleData, metricData, profileData] = await Promise.all([
-          fetchJsonWithRetry<{ c: number; h: number; l: number; dp: number; v?: number }>("Finnhub", quoteUrl),
-          fetchJsonWithRetry<{ c?: number[]; v?: number[] }>("Finnhub", dailyCandleUrl),
-          fetchJsonWithRetry<{ c?: number[] }>("Finnhub", intradayCandleUrl),
-          fetchJsonWithRetry<{ metric?: Record<string, number> }>("Finnhub", metricUrl),
-          fetchJsonWithRetry<{ name?: string; finnhubIndustry?: string; marketCapitalization?: number }>("Finnhub", profileUrl),
+          fetchCachedJsonWithRetry<{ c: number; h: number; l: number; dp: number; v?: number }>({
+            providerName: "Finnhub",
+            cacheKey: `Finnhub:quote:${symbol}`,
+            ttlMs: PROVIDER_CACHE_TTLS_MS.quote,
+            url: quoteUrl,
+          }),
+          fetchCachedJsonWithRetry<{ c?: number[]; v?: number[] }>({
+            providerName: "Finnhub",
+            cacheKey: `Finnhub:daily:${symbol}`,
+            ttlMs: PROVIDER_CACHE_TTLS_MS.daily,
+            url: dailyCandleUrl,
+          }),
+          fetchCachedJsonWithRetry<{ c?: number[] }>({
+            providerName: "Finnhub",
+            cacheKey: `Finnhub:intraday:${symbol}`,
+            ttlMs: PROVIDER_CACHE_TTLS_MS.intraday,
+            url: intradayCandleUrl,
+          }),
+          fetchCachedJsonWithRetry<{ metric?: Record<string, number> }>({
+            providerName: "Finnhub",
+            cacheKey: `Finnhub:metric:${symbol}`,
+            ttlMs: PROVIDER_CACHE_TTLS_MS.metric,
+            url: metricUrl,
+          }),
+          fetchCachedJsonWithRetry<{ name?: string; finnhubIndustry?: string; marketCapitalization?: number }>({
+            providerName: "Finnhub",
+            cacheKey: `Finnhub:profile:${symbol}`,
+            ttlMs: PROVIDER_CACHE_TTLS_MS.profile,
+            url: profileUrl,
+          }),
         ]);
+
+        if ((quoteData as { error?: string }).error) {
+          throw new Error(`Finnhub ${(quoteData as { error?: string }).error}`);
+        }
 
         const dailySeries = Array.isArray(dailyCandleData.c) ? dailyCandleData.c : undefined;
         const intradaySeries = Array.isArray(intradayCandleData.c) ? intradayCandleData.c : undefined;
         const volumeSeries = Array.isArray(dailyCandleData.v) ? dailyCandleData.v : undefined;
         const metric = metricData.metric || {};
 
+        const realtimeTick = finnhubSocketManager.getLatest(symbol);
+        const realtimePrice = realtimeTick && Date.now() - realtimeTick.updatedAt <= 20_000 ? realtimeTick.price : null;
+
         const timeframeSeries = buildTimeframeSeries({
           intraday: intradaySeries,
           daily: dailySeries,
-          fallbackPrice: Number(quoteData.c || 0),
+          fallbackPrice: Number(realtimePrice || quoteData.c || 0),
         });
 
         return sanitizeQuote({
           ticker: symbol,
-          price: Number(quoteData.c || 0),
+          price: Number(realtimePrice || quoteData.c || 0),
           dayHigh: Number(quoteData.h || quoteData.c || 0),
           dayLow: Number(quoteData.l || quoteData.c || 0),
           changePercent: Number(quoteData.dp || 0),
           volume: Number(volumeSeries?.at(-1) || quoteData.v || 0),
           series: timeframeSeries["1D"],
+          dailySeries: dailySeries?.map((v) => Number(v.toFixed(2))),
           timeframeSeries,
           marketCap: Number.isFinite(profileData.marketCapitalization) ? Number(profileData.marketCapitalization) * 1_000_000 : null,
           companyName: profileData.name,
           sector: profileData.finnhubIndustry,
           fundamentals: {
             peRatio: metric.peNormalizedAnnual || metric.peTTM || null,
+            forwardPe: metric.peForwardAnnual || null,
             pbRatio: metric.pbQuarterly || null,
+            pegRatio: metric.pegAnnual || null,
             debtToEquity: metric.totalDebtToEquityQuarterly || null,
             eps: metric.epsNormalizedAnnual || metric.epsInclExtraItemsTTM || null,
+            revenue: metric.revenuePerShareTTM && metric.epsInclExtraItemsTTM
+              ? Number(metric.revenuePerShareTTM * metric.epsInclExtraItemsTTM)
+              : null,
             revenueGrowth: metric.revenueGrowthTTMYoy || null,
             operatingMargin: metric.operatingMarginTTM || null,
             roe: metric.roeTTM || null,
+            roce: metric.roaTTM || null,
+            freeCashFlow: metric.freeCashFlowPerShareTTM || null,
             dividendYield: metric.dividendYieldIndicatedAnnual || null,
             beta: metric.beta || null,
           },
@@ -256,6 +343,11 @@ const twelveDataClient: ProviderClient = {
           fetchJsonWithRetry<{ values?: Array<{ close?: string }> }>("TwelveData", intradaySeriesUrl),
         ]);
 
+        const maybeError = quoteData as { code?: number; status?: string; message?: string };
+        if (maybeError.code || maybeError.status === "error") {
+          throw new Error(`TwelveData ${maybeError.message || "invalid response"}`);
+        }
+
         const dailySeries = (dailySeriesData.values || []).map((entry) => Number(entry.close || 0)).filter((v) => v > 0).reverse();
         const intradaySeries = (intradaySeriesData.values || []).map((entry) => Number(entry.close || 0)).filter((v) => v > 0).reverse();
 
@@ -275,6 +367,7 @@ const twelveDataClient: ProviderClient = {
           marketCap: quoteData.market_cap ? Number(quoteData.market_cap) : null,
           companyName: quoteData.name,
           series: timeframeSeries["1D"],
+          dailySeries,
           timeframeSeries,
         });
       })
@@ -335,6 +428,7 @@ const polygonClient: ProviderClient = {
           changePercent,
           volume: Number(latest.v || 0),
           series: timeframeSeries["1D"],
+          dailySeries: candles.map((entry) => Number(entry.c || 0)).filter((v) => v > 0),
           timeframeSeries,
         });
       })
@@ -373,6 +467,21 @@ const alphaVantageClient: ProviderClient = {
           fetchJsonWithRetry<{ "Time Series (Daily)"?: Record<string, { "4. close"?: string }> }>("AlphaVantage", seriesUrl),
         ]);
 
+        const quoteEnvelope = quoteData as {
+          Note?: string;
+          Information?: string;
+          "Error Message"?: string;
+        };
+        if (quoteEnvelope["Error Message"]) {
+          throw new Error(`AlphaVantage ${quoteEnvelope["Error Message"]}`);
+        }
+        if (quoteEnvelope.Note) {
+          throw new Error(`AlphaVantage ${quoteEnvelope.Note}`);
+        }
+        if (quoteEnvelope.Information && !quoteData["Global Quote"]) {
+          throw new Error(`AlphaVantage ${quoteEnvelope.Information}`);
+        }
+
         const quote = quoteData["Global Quote"];
         if (!quote) {
           return null;
@@ -398,6 +507,7 @@ const alphaVantageClient: ProviderClient = {
           changePercent: Number.isFinite(rawChangePercent) ? rawChangePercent : 0,
           volume: Number(quote["06. volume"] || 0),
           series: timeframeSeries["1D"],
+          dailySeries,
           timeframeSeries,
         });
       })
@@ -413,3 +523,5 @@ export const WATCHLIST_PROVIDER_ORDER: ProviderClient[] = [
   polygonClient,
   alphaVantageClient,
 ];
+
+startProviderStartupValidation();
