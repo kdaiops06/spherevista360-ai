@@ -5,29 +5,33 @@ test.describe("Homepage", () => {
     await page.goto("/");
     await expect(page).toHaveTitle(/SphereVista360/i);
     await expect(
-      page.getByRole("heading", { name: /Financial Intelligence/i }).first()
+      page
+        .getByRole("heading", {
+          name: "Understand Global Markets Through Data and Macro Intelligence",
+        })
+        .first()
     ).toBeVisible();
   });
 
-  test("displays dashboard preview cards", async ({ page }) => {
+  test("displays market pulse and briefing sections", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Market Overview").first()).toBeVisible();
-    await expect(page.getByText("Currency Strength").first()).toBeVisible();
+    await expect(page.getByText("Macro Signals at a Glance").first()).toBeVisible();
+    await expect(page.getByText("AI Morning Briefing").first()).toBeVisible();
   });
 
   test("has working navigation links", async ({ page }) => {
     await page.goto("/");
-    const dashboardLink = page.getByRole("link", { name: /View Dashboard/i });
+    const dashboardLink = page.getByRole("link", { name: /Open Dashboard/i });
     await expect(dashboardLink).toBeVisible();
     await expect(dashboardLink).toHaveAttribute("href", "/dashboard");
 
-    const toolsLink = page.getByRole("link", { name: /Explore Tools/i });
-    await expect(toolsLink).toBeVisible();
-    await expect(toolsLink).toHaveAttribute("href", "/tools");
+    const marketsLink = page.getByRole("link", { name: "Explore Markets", exact: true });
+    await expect(marketsLink).toBeVisible();
+    await expect(marketsLink).toHaveAttribute("href", "/currencies");
   });
 
-  test("displays Global Risk Radar widget", async ({ page }) => {
+  test("displays Global Market Stress Radar widget", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("Global Risk Radar")).toBeVisible();
+    await expect(page.getByText("Global Market Stress Radar").first()).toBeVisible();
   });
 });
