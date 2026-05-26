@@ -1,103 +1,106 @@
-import Link from 'next/link';
-import Head from 'next/head';
+import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Portfolio Risk Analyzer Use Cases",
+  description:
+    "Learn how to analyze portfolio risk, detect concentration issues, and improve diversification with SphereVista360.",
+};
 
 export default function UseCasesPage() {
   return (
-    <>
-      <Head>
-        <title>Portfolio Risk Analyzer Use Cases | SphereVista360</title>
-        <meta name="description" content="Learn how to analyze your portfolio risk, detect concentration issues, and improve diversification using SphereVista360." />
-      </Head>
-      <main className="max-w-2xl mx-auto px-4 py-10">
-        {/* HERO SECTION */}
-        <section className="text-center mb-10">
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">Understand Your Portfolio Risk in Seconds</h1>
-          <p className="text-lg text-gray-600 mb-6">Get instant insights into your investments, detect concentration risks, and make smarter decisions.</p>
-          <Link href="/portfolio-analyzer">
-            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition mb-2">Analyze Your Portfolio for Free 2</a>
-          </Link>
-          <div className="text-xs text-gray-500 mt-2">Used by investors to identify hidden portfolio risks</div>
-          <div className="text-xs text-gray-400 mt-1">No signup required</div>
-        </section>
+    <main className="container-main py-12">
+      <section className="mx-auto max-w-3xl text-center">
+        <h1 className="text-3xl font-medium tracking-tight text-slate-100 md:text-4xl">
+          Understand Portfolio Risk in Minutes
+        </h1>
+        <p className="mt-4 text-base text-slate-300 md:text-lg">
+          Analyze concentration risk, identify exposure clusters, and generate
+          practical portfolio actions with institutional clarity.
+        </p>
+        <Link
+          href="/portfolio-analyzer"
+          className="btn-primary mt-6 inline-flex px-6 py-3"
+        >
+          Analyze Portfolio
+        </Link>
+        <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">
+          No signup required
+        </p>
+      </section>
 
-        {/* HOW IT WORKS */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">How It Works</h2>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-blue-600 text-2xl mb-2">1</div>
-              <div className="font-bold mb-1">Add Your Assets</div>
-              <div className="text-gray-500 text-sm">Enter stocks, crypto, or other investments</div>
+      <section className="mx-auto mt-12 max-w-4xl">
+        <h2 className="text-center text-xl font-medium text-slate-100">
+          How It Works
+        </h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {[
+            ["01", "Add Assets", "Enter stocks, ETFs, crypto, or custom positions."],
+            ["02", "Run Analysis", "Get concentration score and exposure diagnostics."],
+            ["03", "Act with Context", "Review mitigation ideas and rebalance options."],
+          ].map(([step, title, description]) => (
+            <div key={step} className="card p-5 text-center">
+              <p className="text-sm font-medium tracking-wider text-blue-400">{step}</p>
+              <h3 className="mt-2 text-base font-medium text-slate-100">{title}</h3>
+              <p className="mt-2 text-sm text-slate-400">{description}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-blue-600 text-2xl mb-2">2</div>
-              <div className="font-bold mb-1">Instant Analysis</div>
-              <div className="text-gray-500 text-sm">Get risk score, allocation breakdown, and insights</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-blue-600 text-2xl mb-2">3</div>
-              <div className="font-bold mb-1">Take Action</div>
-              <div className="text-gray-500 text-sm">Understand risks and improve diversification</div>
-            </div>
-          </div>
-        </section>
+          ))}
+        </div>
+      </section>
 
-        {/* REAL USE CASE */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">Example: Detecting Hidden Risk</h2>
-          <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <div className="mb-2 font-semibold">Portfolio:</div>
-            <ul className="mb-2 text-sm">
-              <li>AAPL — 80%</li>
-              <li>TSLA — 20%</li>
-            </ul>
-            <div className="mb-2 font-semibold">Analysis Output:</div>
-            <div className="space-y-2 text-sm">
-              <div><span role="img" aria-label="warning">⚠️</span> High concentration in AAPL</div>
-              <div><span role="img" aria-label="down">📉</span> Potential downside risk highlighted</div>
-              <div><span role="img" aria-label="chart">📊</span> Lack of diversification detected</div>
-            </div>
-            <div className="text-gray-600 text-sm mt-4">This portfolio is highly exposed to a single stock, increasing overall risk.</div>
-          </div>
-        </section>
-
-        {/* WHO THIS IS FOR */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">Who This Is For</h2>
-          <ul className="list-disc list-inside text-gray-700 text-sm">
-            <li>Beginner investors unsure about portfolio risk</li>
-            <li>Individuals with a few concentrated holdings</li>
-            <li>Anyone looking for quick and clear investment insights</li>
+      <section className="mx-auto mt-12 max-w-3xl">
+        <h2 className="text-center text-xl font-medium text-slate-100">
+          Example: Hidden Concentration Risk
+        </h2>
+        <div className="card mt-5 p-5">
+          <p className="text-sm font-medium text-slate-200">Portfolio Snapshot</p>
+          <ul className="mt-3 space-y-1 text-sm text-slate-300">
+            <li>AAPL - 80%</li>
+            <li>TSLA - 20%</li>
           </ul>
-        </section>
-
-        {/* WHY SPHEREVISTA360 */}
-        <section className="mb-10">
-          <h2 className="text-xl font-semibold mb-4 text-center">Why Use SphereVista360?</h2>
-          <ul className="list-disc list-inside text-gray-700 text-sm">
-            <li>Instant portfolio analysis (no signup required)</li>
-            <li>Clear and actionable insights</li>
-            <li>Detect concentration and diversification risks</li>
-            <li>Simple, fast, and easy to use</li>
+          <p className="mt-5 text-sm font-medium text-slate-200">Analyzer Output</p>
+          <ul className="mt-2 space-y-2 text-sm text-slate-300">
+            <li>High single-asset concentration in AAPL</li>
+            <li>Elevated downside risk in a correlated drawdown</li>
+            <li>Low diversification resilience score</li>
           </ul>
-        </section>
+          <p className="mt-4 text-sm text-slate-400">
+            This portfolio is highly exposed to one equity shock and lacks
+            adequate diversification.
+          </p>
+        </div>
+      </section>
 
-        {/* FINAL CTA */}
-        <section className="text-center mt-10">
-          <h2 className="text-2xl font-bold mb-2">Start Analyzing Your Portfolio Today</h2>
-          <p className="text-gray-600 mb-6">Get instant insights and improve your investment decisions.</p>
-          <Link href="/portfolio-analyzer">
-            <a className="inline-block bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-blue-700 transition">Try Portfolio Analyzer →</a>
+      <section className="mx-auto mt-12 max-w-3xl">
+        <h2 className="text-center text-xl font-medium text-slate-100">
+          Who This Is For
+        </h2>
+        <ul className="mt-4 list-disc space-y-2 pl-6 text-sm text-slate-300">
+          <li>Investors tracking concentration risk across fewer holdings</li>
+          <li>Operators building disciplined portfolio review habits</li>
+          <li>Teams needing fast, explainable risk diagnostics</li>
+        </ul>
+      </section>
+
+      <section className="mx-auto mt-12 max-w-3xl">
+        <div className="card p-6 text-center">
+          <h2 className="text-2xl font-medium text-slate-100">
+            Start Analyzing Your Portfolio Today
+          </h2>
+          <p className="mt-3 text-slate-300">
+            Get immediate risk signals and more disciplined allocation insights.
+          </p>
+          <Link href="/portfolio-analyzer" className="btn-primary mt-5 inline-flex px-6 py-3">
+            Try Portfolio Analyzer
           </Link>
-        </section>
-      {/* CONTACT EMAIL */}
-      <div className="text-center text-sm text-gray-500 mt-10">
-        Questions or feedback? We&apos;d love to hear from you →
-        <a href="mailto:contact@spherevista360.com" className="underline ml-1">
-          contact@spherevista360.com
-        </a>
-      </div>
+          <p className="mt-5 text-sm text-slate-400">
+            Questions or feedback?
+            <a href="mailto:contact@spherevista360.com" className="ml-1 text-blue-400 hover:underline">
+              contact@spherevista360.com
+            </a>
+          </p>
+        </div>
+      </section>
     </main>
-    </>
   );
 }

@@ -36,20 +36,20 @@ export function NewsletterSignup({ variant = "light" }: NewsletterSignupProps) {
 
   if (status === "success") {
     return (
-      <div className="flex items-center justify-center gap-2 rounded-lg bg-accent-50 p-4 text-accent-700">
+      <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-400/35 bg-emerald-500/12 p-4 text-emerald-300">
         <CheckCircle className="h-5 w-5" />
-        <span className="font-medium">Thanks for subscribing!</span>
+        <span className="font-medium">Subscription confirmed.</span>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
       <div className="relative flex-1">
         <Mail
           className={cn(
             "absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2",
-            variant === "dark" ? "text-gray-400" : "text-gray-400"
+            variant === "dark" ? "text-slate-500" : "text-gray-400"
           )}
         />
         <input
@@ -59,9 +59,9 @@ export function NewsletterSignup({ variant = "light" }: NewsletterSignupProps) {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
           className={cn(
-            "w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2",
+            "w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm transition-colors focus:outline-none focus:ring-2",
             variant === "dark"
-              ? "border-white/20 bg-white/10 text-white placeholder-white/50 focus:ring-white/30"
+              ? "border-white/15 bg-[#0F1218] text-slate-100 placeholder-slate-500 focus:ring-blue-500/25"
               : "border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:ring-brand-500/20"
           )}
         />
@@ -72,11 +72,11 @@ export function NewsletterSignup({ variant = "light" }: NewsletterSignupProps) {
         className={cn(
           "rounded-lg px-5 py-2.5 text-sm font-medium transition-colors",
           variant === "dark"
-            ? "bg-white text-brand-700 hover:bg-gray-100"
+            ? "bg-blue-600 text-white hover:bg-blue-500"
             : "bg-brand-600 text-white hover:bg-brand-700"
         )}
       >
-        {status === "loading" ? "..." : "Subscribe"}
+        {status === "loading" ? "..." : "Get Briefing"}
       </button>
     </form>
   );

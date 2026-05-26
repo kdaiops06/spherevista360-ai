@@ -1,26 +1,28 @@
 "use client";
-import React, { useState } from 'react';
-import PremiumFakeDoor from '../../components/portfolio/PremiumFakeDoor';
-import PortfolioInput from '../../components/portfolio/PortfolioInput';
-import PortfolioSummary from '../../components/portfolio/PortfolioSummary';
-import PortfolioRisk from '../../components/portfolio/PortfolioRisk';
-import PortfolioSuggestions from '../../components/portfolio/PortfolioSuggestions';
-import PortfolioInsights from '../../components/portfolio/PortfolioInsights';
-import { calculatePortfolioRisk } from '../../lib/portfolio/risk';
-import { generatePortfolioSuggestions } from '../../lib/portfolio/suggestions';
-import { Asset } from '../../lib/portfolio/calculations';
+import React, { useState } from "react";
+import PremiumFakeDoor from "../../components/portfolio/PremiumFakeDoor";
+import PortfolioInput from "../../components/portfolio/PortfolioInput";
+import PortfolioSummary from "../../components/portfolio/PortfolioSummary";
+import PortfolioRisk from "../../components/portfolio/PortfolioRisk";
+import PortfolioSuggestions from "../../components/portfolio/PortfolioSuggestions";
+import PortfolioInsights from "../../components/portfolio/PortfolioInsights";
+import { calculatePortfolioRisk } from "../../lib/portfolio/risk";
+import { generatePortfolioSuggestions } from "../../lib/portfolio/suggestions";
+import type { Asset } from "../../lib/portfolio/calculations";
 
 const PortfolioAnalyzerPage: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
   const [premium, setPremium] = useState(false);
 
-  // Wrap setAssets to show loading state
   const handleSetAssets: React.Dispatch<React.SetStateAction<Asset[]>> = (value) => {
     setLoading(true);
-    setAssets(prev => {
-      const result = typeof value === 'function' ? (value as (prev: Asset[]) => Asset[])(prev) : value;
-      setTimeout(() => setLoading(false), 600); // Simulate analysis delay
+    setAssets((prev) => {
+      const result =
+        typeof value === "function"
+          ? (value as (prevState: Asset[]) => Asset[])(prev)
+          : value;
+      setTimeout(() => setLoading(false), 600);
       return result;
     });
   };
@@ -28,50 +30,60 @@ const PortfolioAnalyzerPage: React.FC = () => {
   const risk = calculatePortfolioRisk(assets);
   const suggestions = generatePortfolioSuggestions(assets, { premium, riskLevel: risk.level });
 
-  // Overexposure warning block logic
   let overexposureBlock = null;
   if (!loading && assets.length > 0) {
-    // Calculate allocation
-    const total = assets.reduce((sum, a) => sum + a.amount, 0);
+    const total = assets.reduce((sum, asset) => sum + asset.amount, 0);
     const allocation = total > 0 ? assets.map(a => ({ ...a, percentage: (a.amount / total) * 100 })) : [];
     const overAsset = allocation.find(a => a.percentage > 40);
+
     if (overAsset) {
       overexposureBlock = (
-        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8, padding: 16, margin: '16px 0', color: '#ad6800', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 22 }}>0</span>
-          <span>
-            You are heavily concentrated in {overAsset.ticker} ({overAsset.percentage.toFixed(1)}%).<br />
-            This exposes you to significant single-stock risk.
+        <div className="my-4 flex items-start gap-3 rounded-lg border border-amber-400/35 bg-amber-500/12 p-4 text-amber-100">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-300/35 text-sm font-semibold">
+            !
           </span>
+          <p className="text-sm font-medium leading-6">
+            You are heavily concentrated in {overAsset.ticker} ({overAsset.percentage.toFixed(1)}%).
+            <br />
+            This exposes you to significant single-stock risk.
+          </p>
         </div>
       );
     }
   }
+
   return (
-    <main style={{ maxWidth: 500, margin: '0 auto', padding: 24 }}>
-      <PortfolioInput assets={assets} setAssets={handleSetAssets} />
-      {loading && assets.length > 0 && (
-        <div style={{ textAlign: 'center', margin: '32px 0', fontWeight: 'bold', color: '#888' }}>
-          Analyzing your portfolio...
-        </div>
-      )}
-      {!loading && assets.length > 0 && (
-        <>
-          <div style={{ height: 24 }} />
-          <PortfolioSummary assets={assets} />
-          <div style={{ height: 24 }} />
-          <PortfolioRisk risk={risk} />
-          {overexposureBlock}
-          <div style={{ height: 24 }} />
-          <div style={{ margin: '32px 0 8px 0', fontWeight: 'bold', fontSize: 18, letterSpacing: 0.2 }}>
-            Portfolio Insights
+    <main className="container-main py-8">
+      <section className="mx-auto max-w-xl">
+        <PortfolioInput assets={assets} setAssets={handleSetAssets} />
+
+        {loading && assets.length > 0 && (
+          <div className="my-8 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-medium text-slate-300">
+            Analyzing your portfolio...
           </div>
-          <PortfolioInsights assets={assets} />
-          <div style={{ height: 24 }} />
-          <PortfolioSuggestions suggestions={suggestions} />
-        </>
-      )}
-      {!loading && assets.length > 0 && <PremiumFakeDoor onUnlock={() => setPremium(true)} />}
+        )}
+
+        {!loading && assets.length > 0 && (
+          <>
+            <div className="mt-6" />
+            <PortfolioSummary assets={assets} />
+            <div className="mt-6" />
+            <PortfolioRisk risk={risk} />
+            {overexposureBlock}
+            <div className="mt-6" />
+            <div className="mb-2 mt-8 text-lg font-medium tracking-tight text-slate-100">
+              Portfolio Insights
+            </div>
+            <PortfolioInsights assets={assets} />
+            <div className="mt-6" />
+            <PortfolioSuggestions suggestions={suggestions} />
+          </>
+        )}
+
+        {!loading && assets.length > 0 && (
+          <PremiumFakeDoor onUnlock={() => setPremium(true)} />
+        )}
+      </section>
     </main>
   );
 };

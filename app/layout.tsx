@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { rootCssVariables } from "@/styles/theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -66,10 +67,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="canonical" href="https://spherevista360.com" />
+        <style id="sv360-theme-vars">{rootCssVariables}</style>
       </head>
       <body className="flex min-h-screen flex-col">
         <Header />
