@@ -21,6 +21,7 @@ const ALERT_DROP_THRESHOLD = Number(process.env.WATCHLIST_AI_ALERT_DROP_THRESHOL
 const ALERT_CRASH_THRESHOLD = 10;
 const ALERT_VOLATILITY_THRESHOLD = Number(process.env.WATCHLIST_AI_ALERT_VOLATILITY_THRESHOLD || 72);
 const ALERT_VOLUME_SPIKE_RATIO = Number(process.env.WATCHLIST_AI_ALERT_VOLUME_SPIKE_RATIO || 1.7);
+const USE_SYNTHETIC_WATCHLIST = process.env.WATCHLIST_AI_E2E === "1" || process.env.NODE_ENV === "test";
 
 const watchlistCache = new Map<string, { expiresAt: number; value: WatchlistSnapshot }>();
 const inflightSnapshots = new Map<string, Promise<WatchlistSnapshot>>();
@@ -55,6 +56,93 @@ function normalizeSymbols(symbols?: string[]): string[] {
 
 function buildCacheKey(symbols: string[], timeframe: WatchlistTimeframe): string {
   return `${timeframe}:${symbols.join(",")}`;
+}
+
+function hashSymbol(symbol: string): number {
+  let hash = 0;
+  for (let index = 0; index < symbol.length; index += 1) {
+    hash = (hash * 31 + symbol.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function buildSyntheticSeries(symbol: string, length: number, timeframe: WatchlistTimeframe): number[] {
+  const hash = hashSymbol(`${symbol}:${timeframe}`);
+  const basePrice = 40 + (hash % 1_600) / 10;
+  const drift = ((hash % 21) - 10) / 120;
+  const amplitude = 0.006 + (hash % 9) / 2000;
+  const offset = (hash % 13) / 5;
+
+  return Array.from({ length }, (_, index) => {
+    const progress = length <= 1 ? 1 : index / (length - 1);
+    const oscillation = Math.sin(progress * Math.PI * 2 + offset) * amplitude;
+    const value = basePrice * (1 + drift * (progress - 0.5) + oscillation);
+    return Number(Math.max(1, value).toFixed(2));
+  });
+}
+
+function buildSyntheticQuote(symbol: string, index: number, timeframe: WatchlistTimeframe): RawProviderQuote {
+  const meta = stockMetadata[symbol] || {
+    name: symbol,
+    sector: "General",
+    assetType: "stock" as const,
+  };
+  const hash = hashSymbol(symbol);
+  const seriesLength = timeframe === "1D" ? 30 : timeframe === "1W" ? 22 : timeframe === "1M" ? 30 : 66;
+  const series = buildSyntheticSeries(symbol, seriesLength, timeframe);
+  const price = series[series.length - 1] || 100;
+  const dayHigh = Math.max(...series) * 1.01;
+  const dayLow = Math.min(...series) * 0.99;
+  const changePercent = Number((((series[series.length - 1] - series[0]) / Math.max(series[0], 0.01)) * 100).toFixed(2));
+  const volume = 800_000 + ((hash % 450) * 9_000) + index * 120_000;
+  const dailySeries = buildSyntheticSeries(symbol, 66, timeframe);
+
+  return {
+    ticker: symbol,
+    price: Number(price.toFixed(2)),
+    changePercent,
+    dayHigh: Number(dayHigh.toFixed(2)),
+    dayLow: Number(dayLow.toFixed(2)),
+    volume,
+    series,
+    dailySeries,
+    timeframeSeries: {
+      "1D": buildSyntheticSeries(symbol, 30, "1D"),
+      "1W": buildSyntheticSeries(symbol, 22, "1W"),
+      "1M": buildSyntheticSeries(symbol, 30, "1M"),
+      "3M": buildSyntheticSeries(symbol, 66, "3M"),
+    },
+    marketCap: meta.marketCap ?? null,
+    companyName: meta.name,
+    sector: meta.sector,
+    fundamentals: {
+      peRatio: Number(((hash % 280) / 10 + 8).toFixed(2)),
+      forwardPe: Number(((hash % 240) / 10 + 7).toFixed(2)),
+      pbRatio: Number(((hash % 45) / 10 + 1).toFixed(2)),
+      pegRatio: Number((((hash % 160) / 100) + 0.8).toFixed(2)),
+      debtToEquity: Number(((hash % 220) / 10 + 5).toFixed(2)),
+      eps: Number((((hash % 120) / 10) + 1.2).toFixed(2)),
+      revenue: Number((((hash % 500) + 50) * 1_000_000).toFixed(0)),
+      revenueGrowth: Number((((hash % 35) - 5) / 10).toFixed(2)),
+      operatingMargin: Number((((hash % 45) - 10) / 2).toFixed(2)),
+      roe: Number((((hash % 55) + 5) / 1.5).toFixed(2)),
+      roce: Number((((hash % 42) + 4) / 1.8).toFixed(2)),
+      freeCashFlow: Number((((hash % 700) + 75) * 1_000_000).toFixed(0)),
+      dividendYield: Number(((hash % 35) / 10).toFixed(2)),
+      beta: Number((((hash % 180) / 100) + 0.7).toFixed(2)),
+    },
+  };
+}
+
+function buildSyntheticProviderHealth() {
+  return WATCHLIST_PROVIDER_ORDER.map((provider) => ({
+    provider: provider.name,
+    configured: provider.isConfigured(),
+    ok: false,
+    status: provider.isConfigured() ? "degraded" : "unavailable",
+    reachable: false,
+    error: USE_SYNTHETIC_WATCHLIST ? "e2e_synthetic_mode" : "not_configured",
+  })) as ProviderHealthStatus[];
 }
 
 function inferTrend(series: number[]): "up" | "down" | "flat" {
@@ -590,6 +678,66 @@ export async function getWatchlistSnapshot(params: {
   const cacheKey = buildCacheKey(symbols, timeframe);
   const now = Date.now();
   const ttlMs = Math.max(5, CACHE_TTL_SECONDS) * 1000;
+
+  if (USE_SYNTHETIC_WATCHLIST) {
+    const quotes = symbols.map((symbol, index) => buildSyntheticQuote(symbol, index, timeframe));
+    const providerResult = {
+      quotes,
+      source: "Synthetic E2E fallback",
+      isLive: false,
+      fallbackUsed: true,
+      fallbackReason: "Playwright E2E mode uses synthetic watchlist data for deterministic rendering.",
+      providerHealth: buildSyntheticProviderHealth(),
+    };
+
+    const items = providerResult.quotes
+      .map((quote) => toStockItem(quote, providerResult.isLive))
+      .sort((a, b) => b.momentumScore - a.momentumScore);
+
+    const alerts = buildAlerts(items);
+    const topMovers = [...items].sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent)).slice(0, 6);
+    const screenerTimeframe = mapToCardTimeframe(timeframe);
+    const screeners = buildScreeners(items, screenerTimeframe);
+    const smartPanels = buildSmartPanels(items);
+
+    const snapshot: WatchlistSnapshot = {
+      timeframe,
+      source: providerResult.source,
+      isLive: providerResult.isLive,
+      fallbackUsed: providerResult.fallbackUsed,
+      fallbackReason: providerResult.fallbackReason,
+      stale: true,
+      staleReason: providerResult.fallbackReason,
+      providerHealth: providerResult.providerHealth,
+      updatedAt: new Date().toISOString(),
+      items,
+      alerts,
+      topMovers,
+      screenerTimeframe,
+      screeners,
+      smartPanels,
+      riskSignals: [
+        {
+          label: "Portfolio Heat",
+          score: clamp(Math.round(items.reduce((sum, item) => sum + item.volatilityScore, 0) / Math.max(items.length, 1)), 0, 100),
+          detail: "Cross-watchlist volatility and dispersion score.",
+        },
+        {
+          label: "Momentum Breadth",
+          score: clamp(Math.round(items.reduce((sum, item) => sum + item.momentumScore, 0) / Math.max(items.length, 1)), 0, 100),
+          detail: "Average momentum strength across tracked symbols.",
+        },
+        {
+          label: "Alert Pressure",
+          score: clamp(alerts.length * 12, 0, 100),
+          detail: "Aggregate intensity from active downside, volume, and volatility signals.",
+        },
+      ],
+      pollIntervalSeconds: Math.max(10, POLL_INTERVAL_SECONDS),
+    };
+
+    return snapshot;
+  }
 
   if (!params.forceRefresh) {
     const cached = watchlistCache.get(cacheKey);

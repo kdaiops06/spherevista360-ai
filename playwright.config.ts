@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+process.env.WATCHLIST_AI_E2E = process.env.WATCHLIST_AI_E2E || "1";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
