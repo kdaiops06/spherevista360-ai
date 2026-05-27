@@ -13,8 +13,9 @@ test.describe("Watchlist AI Dashboard", () => {
   test("timeframe controls and sorting are interactive", async ({ page }) => {
     await page.goto("/dashboard/watchlist-ai");
 
-    await page.getByRole("button", { name: "1W" }).click();
-    await expect(page.getByRole("button", { name: "1W" })).toBeVisible();
+    const oneWeekButton = page.getByRole("button", { name: "1W" }).first();
+    await oneWeekButton.click();
+    await expect(oneWeekButton).toBeVisible();
 
     const sortSelect = page.locator("select").first();
     await sortSelect.selectOption("most-volatile");
@@ -28,7 +29,7 @@ test.describe("Watchlist AI Dashboard", () => {
     await techFilter.click();
     await expect(techFilter).toBeVisible();
 
-    const refreshButton = page.getByRole("button", { name: /Refresh/i });
+    const refreshButton = page.getByRole("button", { name: "Refresh", exact: true });
     await expect(refreshButton).toBeVisible();
     await refreshButton.click();
     await expect(refreshButton).toBeVisible();

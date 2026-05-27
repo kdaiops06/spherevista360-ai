@@ -87,6 +87,13 @@ const tools = [
     color: "bg-amber-100 text-amber-700",
   },
   {
+    name: "AI Stock Comparison Intelligence",
+    description: "Compare 2-6 stocks side-by-side with institutional AI scoring, valuation heat, and risk/reward intelligence.",
+    href: "/tools/stock-comparison-intelligence",
+    icon: Brain,
+    color: "bg-sky-100 text-sky-700",
+  },
+  {
     name: "Currency Forecast Engine",
     description: "AI-powered forecasts for USD/INR, EUR/USD, and Gold vs Dollar.",
     href: "/tools/currency-forecast",
