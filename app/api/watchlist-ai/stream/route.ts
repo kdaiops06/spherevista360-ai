@@ -1,5 +1,6 @@
 import { getWatchlistSnapshot } from "@/lib/watchlist-ai/service";
 import type { WatchlistTimeframe } from "@/lib/watchlist-ai/types";
+import { finnhubSocketManager } from "@/lib/websocket/finnhub";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,12 +36,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const timeframe = parseTimeframe(url.searchParams.get("timeframe"));
   const symbols = parseSymbols(url.searchParams.get("symbols"));
+  const activeSymbols = symbols && symbols.length > 0 ? symbols : ["AAPL", "MSFT", "NVDA", "TSLA", "GOOGL", "AMZN", "META"];
 
   let intervalId: NodeJS.Timeout | undefined;
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       controller.enqueue(toSsePayload("connected", { timeframe, symbols: symbols || [] }));
+      finnhubSocketManager.subscribe(activeSymbols);
 
       const pushSnapshot = async () => {
         try {
@@ -61,12 +64,13 @@ export async function GET(request: Request) {
       };
 
       await pushSnapshot();
-      intervalId = setInterval(pushSnapshot, 20_000);
+      intervalId = setInterval(pushSnapshot, 10_000);
     },
     cancel() {
       if (intervalId) {
         clearInterval(intervalId);
       }
+      finnhubSocketManager.unsubscribe(activeSymbols);
     },
   });
 
